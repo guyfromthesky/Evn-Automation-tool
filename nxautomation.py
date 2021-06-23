@@ -356,12 +356,13 @@ def Swipe_Up(Device, Location_Object_A, Range):
 	return
 
 def Send_Text(Device, Text):
-	command = "input text \' %s \'" %Text
+	command = "input text \'%s\'" %Text
 	Device.shell(command)
 	return
 
 def Send_Key(Device, KeyID):
-	command = "input keyevent \' %s \'" %KeyID
+	command = "input keyevent \'%s\'" %KeyID
+	print('Command: ', command)
 	Device.shell(command)
 	return
 

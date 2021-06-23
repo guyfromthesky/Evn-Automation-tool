@@ -538,17 +538,31 @@ class Automation:
 		return self.Generate_Result(Status = ResultStatus)
 
 	def Send_Enter_Key(self):
-		Send_Key(self.Device, 'KEYCODE_ENTER')
+		Send_Key(self.Device, '66')
+		ResultStatus = True
+		return self.Generate_Result(Status = ResultStatus)
+
+
+	def Send_Tab_Key(self):
+		Send_Key(self.Device, '61')
+		ResultStatus = True
+		return self.Generate_Result(Status = ResultStatus)
 
 	def Send_BackKey_Key(self):
-		Send_Key(self.Device, 'KEYCODE_BACK')	
+		Send_Key(self.Device, '4')
+		ResultStatus = True
+		return self.Generate_Result(Status = ResultStatus)
 		
 
 	def Input_Text(self, Text):
 		Send_Text(self.Device, Text)
+		ResultStatus = True
+		return self.Generate_Result(Status = ResultStatus)
 
 	def Input_Current_Value(self):
 		Send_Text(self.Device, self.Execution_Value)
+		ResultStatus = True
+		return self.Generate_Result(Status = ResultStatus)
 
 	def Tap_Current_Item(self):
 		self.Tap_Item(self.Execution_Value)

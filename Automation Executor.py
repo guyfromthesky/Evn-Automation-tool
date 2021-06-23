@@ -1,4 +1,5 @@
 #System variable and io handling
+from genericpath import isfile
 import sys, getopt
 import os
 import multiprocessing
@@ -26,7 +27,7 @@ from openpyxl import load_workbook, worksheet, Workbook
 from nxautomation import *
 from testscript import Automation as Tester
 
-cwd = os.path.abspath(os.path.dirname(sys.argv[0]))
+CWD = os.path.abspath(os.path.dirname(sys.argv[0]))
 
 #MyTranslatorAgent = 'google'
 Tool = "Automation Execuser"
@@ -167,18 +168,19 @@ class Automation_Execuser(Frame):
 		self.Generate_Tab_UI()
 		self.init_UI()
 		self.init_UI_Configuration()
-		cwd = str(os.path.abspath(os.path.dirname(sys.argv[0])))
+		#cwd = str(os.path.abspath(os.path.dirname(sys.argv[0])))
+		adb_path = CWD + '/adb/adb.exe'
 		try:
 			print('Start server')
-			os.system('adb start-server')
+			os.system( adb_path + ' start-server')
 			print('Get CPU profile')
-			self.CPU = os.popen('adb shell getprop ro.product.cpu.abi').read()
+			self.CPU = os.popen(adb_path + ' shell getprop ro.product.cpu.abi').read()
 			self.CPU = self.CPU.replace('\n', "").trim()
 			print(self.CPU)
 			print('Push touch to device')	
 			if self.CPU == "":
-				print('adb push \"%s/libs/%s/touch\" /data/local/tmp' % (cwd, self.CPU))
-				os.system('adb push \"%s/libs/%s/touch\" /data/local/tmp' % (cwd, self.CPU)) 
+				print('adb push \"%s/libs/%s/touch\" /data/local/tmp' % (CWD, self.CPU))
+				os.system(adb_path + ' push \"%s/libs/%s/touch\" /data/local/tmp' % (CWD, self.CPU)) 
 			
 		except:
 
@@ -277,7 +279,7 @@ class Automation_Execuser(Frame):
 		Row += 1
 
 		self.Str_DB_Path = StringVar()
-		self.Str_DB_Path.set( cwd + '\\DB\\db.xlsx')
+		self.Str_DB_Path.set( CWD + '\\DB\\db.xlsx')
 		Label(Tab, text=  self.LanguagePack.Label['MainDB']).grid(row=Row, column=1, columnspan=2, padx=5, pady=5, sticky= W)
 		self.Entry_Old_File_Path = Entry(Tab,width = 130, state="readonly", textvariable=self.Str_DB_Path)
 		self.Entry_Old_File_Path.grid(row=Row, column=3, columnspan=7, padx=4, pady=5, sticky=E)
@@ -288,7 +290,7 @@ class Automation_Execuser(Frame):
 
 		Row += 1
 		self.Str_Test_Case_Path = StringVar()
-		self.Str_Test_Case_Path.set( cwd + '\\Configuration_V4_Gacha_Test.xlsx')
+		self.Str_Test_Case_Path.set( CWD + '\\Testcase\\Sample_Automation_Testcase.xlsx')
 		Label(Tab, text=  self.LanguagePack.Label['TestCaseList']).grid(row=Row, column=1, columnspan=2, padx=5, pady=5, sticky= W)
 		self.Entry_New_File_Path = Entry(Tab,width = 130, state="readonly", textvariable=self.Str_Test_Case_Path)
 		self.Entry_New_File_Path.grid(row=Row, column=3, columnspan=7, padx=4, pady=5, sticky=E)
@@ -803,7 +805,11 @@ def Function_Execute_Script(
 	if Connect_Status == False:
 		Status_Queue.put('Device is not connected.')
 		return
-	if All == None or All == []:
+	if not os.path.isfile(Test_Case_Path):
+		Status_Queue.put("Testcase is not exist")
+		return
+
+	if All == None or All 	== []:
 		Status_Queue.put('Loading test case')
 		All = Function_Import_TestCase(Test_Case_Path)
 	print('all test case', All)
@@ -854,8 +860,12 @@ def Function_Execute_Script(
 def Function_Generate_Testcase(
 		Status_Queue, Result_Queue, DB_Path, Test_Case_Path, **kwargs
 ):
-	
+	if not os.path.isfile(Test_Case_Path):
+		Status_Queue.put("Testcase is not exist")
+		return
+		
 	Status_Queue.put("Importing test case config")
+	
 	All = Function_Import_TestCase(Test_Case_Path)
 	
 	TestCase = All['Testcase']
