@@ -1,4 +1,3 @@
-from ppadb.client import Client as AdbClient
 import os, sys
 import cv2
 import numpy as np
@@ -9,9 +8,10 @@ from openpyxl.styles import Alignment
 from datetime import datetime
 import time
 import imutils
-#cwd = os.path.dirname(os.path.realpath(__file__))
-cwd = os.path.abspath(os.path.dirname(sys.argv[0]))
+
+CWD = os.path.abspath(os.path.dirname(sys.argv[0]))
 import inspect
+
 from touch import TouchActionBuilder
 
 ################################################################################################################
@@ -318,13 +318,19 @@ def Function_Import_DB(DB_Path, List_Sheet = [], List_Item = []):
 	else:
 		return({})
 
-
-
 ################################################################################################################
-#Tap on Location_Object
-def Tap(Device, Location_Object):
-	command = "input tap " + str(Location_Object['x']) + " " + str(Location_Object['y'])
+# Sleep for an amount of time
+def Sleep(total_miliseconds):
+	time.sleep(total_miliseconds/1000)
+
+def tap(Device, x, y):
+	command = "input tap " + str(x) + " " + str(y)
 	Device.shell(command)
+	return
+
+#Tap on Location_Object
+def tap_object(Device, Location_Object):
+	Tap(Device, Location_Object['x'], Location_Object['y'])
 	return
 
 def Four_Touch():
@@ -341,62 +347,57 @@ def Three_Touch():
 	del th
 	return
 
-#Swipe from A -> B
-def Swipe(Device, Location_Object_A, Location_Object_B):
-	command = "input swipe " + str(Location_Object_A['x']) + " " + str(Location_Object_A['y']) + " " + str(Location_Object_B['x']) + " " + str(Location_Object_B['y'])
+def swipe(Device, x1, y1, x2, y2):
+	command = "input swipe " + str(x1) + " " + str(y1) + " " + str(x2) + " " + str(y2)
 	Device.shell(command)
 	return
 
 
+#Swipe from A -> B
+def swipe_object(Device, Location_Object_A, Location_Object_B):
+	swipe(Device, Location_Object_A['x'], Location_Object_A['y'], Location_Object_B['x'], Location_Object_B['x'])
+	return
+
+
 #Swipe up
-def Swipe_Up(Device, Location_Object_A, Range):
+def swipe_up(Device, Location_Object_A, Range):
 	Location_Object_B = {'x': Location_Object_A['x'], 'y': Location_Object_A['y'] - Range} 
 	command = "input swipe " + str(Location_Object_A['x']) + " " + str(Location_Object_A['y']) + " " + str(Location_Object_B['x']) + " " + str(Location_Object_B['y'])
 	Device.shell(command)
 	return
 
-def Send_Text(Device, Text):
+def send_text(Device, Text):
 	command = "input text \'%s\'" %Text
 	Device.shell(command)
 	return
 
-def Send_Key(Device, KeyID):
+def send_key(Device, KeyID):
 	command = "input keyevent \'%s\'" %KeyID
 	print('Command: ', command)
 	Device.shell(command)
 	return
 
-def Save_Screenshot(Device, Name):
+def save_screenshot(Device, Name):
+
 	Image = Device.screencap()
-	Img_Name = Correct_Path(Name + '_' + Function_Get_TimeStamp() + '.png', 'Test Result')
+	Img_Name = Correct_Path(Name + '_' + Function_Get_TimeStamp() + '.png', 'Screenshot')
 	with open(Img_Name, "wb") as fp:
 		fp.write(Image)
 	return	
 
-def Save_Image(Img, Name):
-	Img_Name = Correct_Path(Name + '_' + Function_Get_TimeStamp() + '.png', 'Test Result')
+def save_image(Img, Name):
+	Img_Name = Correct_Path(Name + '_' + Function_Get_TimeStamp() + '.png', 'Image')
 	cv2.imwrite(Img_Name, Img) 
 	return
 
 ################################################################################################################
 
-def HD_Resize(Img):
-	
-	scale_width = 1280
-	scale_percent = int(scale_width * 100 / Img.shape[1])
-	print('scale_percent', scale_percent)
-	#width = int(img.shape[1] * scale_percent / 100)
-	scale_height = int(Img.shape[0] * scale_percent / 100)
-	dim = (scale_width, scale_height)
-	# resize image
-	resized = cv2.resize(Img, dim, interpolation = cv2.INTER_AREA)
-	return resized
-
 def Resize(Img, scale_percent):
 
-	width = int(Img.shape[1] * scale_percent / 100)
-	height = int(Img.shape[0] * scale_percent / 100)
+	width = int(Img.shape[1] * scale_percent)
+	height = int(Img.shape[0] * scale_percent)
 	dim = (width, height)
+	
 	# resize image
 	resized = cv2.resize(Img, dim, interpolation = cv2.INTER_AREA)
 	return resized
@@ -482,28 +483,18 @@ def Search_All_Object(Img_Screenshot, Img_Template, Match_Rate=0.9):
 		return False	
 
 
-def Fast_Search(Img_Screenshot, Img_Template, Match_Rate=0.50):
+def Get_Item(Img_Screenshot, Img_Template, Match_Rate=0.50):
 
 	(source_H, _source_W) = Img_Screenshot.shape[:2]
+	
 	ratio = 1080 / source_H
 	if ratio != 1:
 		Img_Screenshot = Resize(Img_Screenshot, ratio)
 
-	#Img_Template = Resize(Img_Template, 50)
-	#Img_Template = cv2.bitwise_not(Img_Template)
-
-	#Img_Template = cv2.bitwise_not(Img_Template)
-
 	template = cv2.cvtColor(Img_Template, cv2.COLOR_BGR2GRAY)
-	#template = cv2.Canny(template, 50, 200)
 	(tH, tW) = template.shape[:2]
 
-	#image = cv2.bitwise_not(Img_Screenshot)
 	gray = cv2.cvtColor(Img_Screenshot, cv2.COLOR_BGR2GRAY)
-	#cv2.imshow("template",template)
-	#cv2.waitKey(0)
-	#cv2.imshow("gray",gray)
-	#cv2.waitKey(0)
 
 	Found = None
 	Loc = None
@@ -515,13 +506,11 @@ def Fast_Search(Img_Screenshot, Img_Template, Match_Rate=0.50):
 		r = gray.shape[1] / float(resized.shape[1])
 		if resized.shape[0] < tH or resized.shape[1] < tW:
 			break
-		#resized = cv2.Canny(resized, 50, 200)
 		result = cv2.matchTemplate(resized, template, cv2.TM_CCOEFF_NORMED)
 		(_, maxVal, _, maxLoc) = cv2.minMaxLoc(result)
 
 		if Found is None or maxVal > Found[0]:
 			Found = (maxVal, maxLoc, r)
-			print('Match rate', int(maxVal*100))
 			if maxVal >= Match_Rate:
 				
 				(startX, startY) = (int(maxLoc[0] * r), int(maxLoc[1] * r))
@@ -530,6 +519,10 @@ def Fast_Search(Img_Screenshot, Img_Template, Match_Rate=0.50):
 				break
 
 	if Loc != None:
+		print('Loc', Loc)
+		for key in Loc:
+			Loc[key] /= ratio
+		print('New Loc', Loc)
 		return Loc
 	else:
 		return False
@@ -596,7 +589,7 @@ def Count_Object(Img_Screenshot, Img_Template, Match_Rate=0.50):
 	else:
 		return False, Img_Screenshot	
 
-def  Duplicated(center1, center2, tw, th):
+def Duplicated(center1, center2, tw, th):
 	
 	if abs(center1[0] - center2[0]) <= tw:
 		if abs(center1[1] - center2[1]) <= th:
@@ -617,12 +610,12 @@ def intersected(bottom_left1, top_right1, bottom_left2, top_right2):
 def Correct_Path(path, Folder = 'DB'):
 	#print("Folder", Folder)
 	#print('Path', path )
-	if not os.path.isdir(cwd + '//' + Folder):
+	if not os.path.isdir(CWD + '//' + Folder):
 		try:
-			os.mkdir(cwd + '//' + Folder)
+			os.mkdir(CWD + '//' + Folder)
 		except OSError:
 			return False
-	return cwd + '//' + Folder + '//' + path
+	return CWD + '//' + Folder + '//' + path
 
 def Init_Folder(FolderPath):
 	if not os.path.isdir(FolderPath):
@@ -649,6 +642,7 @@ def Function_Execute_TestCase(TestSteps, Controller, TestCase_Path, Result_Path,
 	preflix = 'Controller' + '.'	
 	ResultComment = []
 	Export_Result = []
+
 
 	for Step in TestSteps:
 		Result = None
@@ -730,8 +724,8 @@ def Function_Execute_TestCase(TestSteps, Controller, TestCase_Path, Result_Path,
 		#Dir, Name, Ext = Split_Path(TestCase_Path)
 
 		#Result_Path = 
-
-	Print_Result(TestCase_Path, Export_Result, Result_Path)
+	if Test_Type not in ['ListAutoTest', 'ListManualTest']:
+		Print_Result(TestCase_Path, Export_Result, Result_Path)
 		#eval("print(Controller.Result_Array)")
 
 	return True

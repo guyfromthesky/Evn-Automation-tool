@@ -22,16 +22,17 @@ from tkinter import scrolledtext
 
 #from tkinter import style
 
-from openpyxl import load_workbook, worksheet, Workbook
+from openpyxl import load_workbook
 
 from nxautomation import *
 from testscript import Automation as Tester
 
 CWD = os.path.abspath(os.path.dirname(sys.argv[0]))
-
+ADBPATH = '\"' + CWD + '\\adb\\adb.exe' + '\"'
+print('ADB path:', ADBPATH)
 #MyTranslatorAgent = 'google'
 Tool = "Automation Execuser"
-VerNum = '0.2.0b'
+VerNum = '0.3.0b'
 version = Tool  + " " +  VerNum
 DELAY1 = 20
 
@@ -168,22 +169,21 @@ class Automation_Execuser(Frame):
 		self.Generate_Tab_UI()
 		self.init_UI()
 		self.init_UI_Configuration()
-		#cwd = str(os.path.abspath(os.path.dirname(sys.argv[0])))
-		adb_path = CWD + '/adb/adb.exe'
+
 		try:
 			print('Start server')
-			os.system( adb_path + ' start-server')
+			os.popen( ADBPATH + ' start-server')
+			os.popen( ADBPATH + ' tcpip 5555')
 			print('Get CPU profile')
-			self.CPU = os.popen(adb_path + ' shell getprop ro.product.cpu.abi').read()
+			self.CPU = os.popen(ADBPATH + ' shell getprop ro.product.cpu.abi').read()
 			self.CPU = self.CPU.replace('\n', "").trim()
 			print(self.CPU)
 			print('Push touch to device')	
 			if self.CPU == "":
 				print('adb push \"%s/libs/%s/touch\" /data/local/tmp' % (CWD, self.CPU))
-				os.system(adb_path + ' push \"%s/libs/%s/touch\" /data/local/tmp' % (CWD, self.CPU)) 
+				os.system(ADBPATH + ' push \"%s/libs/%s/touch\" /data/local/tmp' % (CWD, self.CPU)) 
 			
 		except:
-
 			pass
 		print('Get device serial')
 		self.Get_Serial()
@@ -215,8 +215,8 @@ class Automation_Execuser(Frame):
 	# UI init
 	def init_UI(self):
 	
-		self.Generate_Automation_Execution_UI(self.DataCompare)
-		#self.Generate_File_Comparision_UI(self.FileComparison)
+		self.Generate_Automation_Execution_UI(self.Main)
+		self.Generate_Debugger_UI(self.Controller)
 		#self.Generate_Folder_Comparision_UI(self.FolderComparison)
 		#self.Generate_Optimizer_UI(self.Optimizer)
 		#self.Generate_Debugger_UI(self.Process)
@@ -248,14 +248,14 @@ class Automation_Execuser(Frame):
 		self.TAB_CONTROL = ttk.Notebook(self.parent)
 		#Tab
 		
-		self.DataCompare = ttk.Frame(self.TAB_CONTROL)
-		self.TAB_CONTROL.add(self.DataCompare, text= self.LanguagePack.Tab['StructuredCompare'])
-		'''
+		self.Main = ttk.Frame(self.TAB_CONTROL)
+		self.TAB_CONTROL.add(self.Main, text= 'Main')
+		
 		#Tab
-		self.FileComparison = ttk.Frame(self.TAB_CONTROL)
-		self.TAB_CONTROL.add(self.FileComparison, text= self.LanguagePack.Tab['FileComparison'])
+		self.Controller = ttk.Frame(self.TAB_CONTROL)
+		self.TAB_CONTROL.add(self.Controller, text= 'Controller')
 		#Tab
-		'''
+		
 
 		'''
 		self.FolderComparison = ttk.Frame(self.TAB_CONTROL)
@@ -275,26 +275,28 @@ class Automation_Execuser(Frame):
 	def Generate_Automation_Execution_UI(self, Tab):
 		
 		Row = 1
-		Label(Tab, textvariable=self.Notice).grid(row=Row, column=1, columnspan = 10, padx=5, pady=5, sticky= W)
+		self.Device_IP = Text(Tab, width=30, height=1, undo=True, wrap=WORD)
+		self.Device_IP.grid(row=Row, column=8, columnspan=2, padx=5, pady=5, sticky=E)
+		self.Device_IP.insert("end", "192.168.100.3")
+		Button(Tab, width = self.Button_Width_Half, text=  "Connect", command= self.Connect_Device).grid(row=Row, column=10, padx=0, pady=0, sticky=W)
 		Row += 1
-
 		self.Str_DB_Path = StringVar()
 		self.Str_DB_Path.set( CWD + '\\DB\\db.xlsx')
 		Label(Tab, text=  self.LanguagePack.Label['MainDB']).grid(row=Row, column=1, columnspan=2, padx=5, pady=5, sticky= W)
 		self.Entry_Old_File_Path = Entry(Tab,width = 130, state="readonly", textvariable=self.Str_DB_Path)
 		self.Entry_Old_File_Path.grid(row=Row, column=3, columnspan=7, padx=4, pady=5, sticky=E)
-		Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['Browse'], command= self.Btn_Browse_DB_File).grid(row=Row, column=10, padx=5, pady=5, sticky=E)
+		Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['Browse'], command= self.Btn_Browse_DB_File).grid(row=Row, column=10, padx=0, pady=0, sticky=W)
 		#Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['SelectBGColor'], command= self.Btn_Select_Background_Colour).grid(row=Row, column=9, columnspan=2,padx=5, pady=5, sticky=W)
 		
 		#Btn_Generate_TestCase
 
 		Row += 1
 		self.Str_Test_Case_Path = StringVar()
-		self.Str_Test_Case_Path.set( CWD + '\\Testcase\\Sample_Automation_Testcase.xlsx')
+		#self.Str_Test_Case_Path.set( CWD + '\\Testcase\\Sample_Automation_Testcase.xlsx')
 		Label(Tab, text=  self.LanguagePack.Label['TestCaseList']).grid(row=Row, column=1, columnspan=2, padx=5, pady=5, sticky= W)
 		self.Entry_New_File_Path = Entry(Tab,width = 130, state="readonly", textvariable=self.Str_Test_Case_Path)
 		self.Entry_New_File_Path.grid(row=Row, column=3, columnspan=7, padx=4, pady=5, sticky=E)
-		Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['Browse'], command= self.Btn_Browse_Test_Case_File).grid(row=Row, column=10, padx=5, pady=5, sticky=E)
+		Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['Browse'], command= self.Btn_Browse_Test_Case_File).grid(row=Row, column=10, padx=0, pady=0, sticky=W)
 		#Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['SelectFontColor'], command= self.Btn_Select_Font_Colour).grid(row=Row, column=9, columnspan=2,padx=5, pady=5, sticky=W)
 		
 	
@@ -347,8 +349,11 @@ class Automation_Execuser(Frame):
 
 	def Generate_Debugger_UI(self,Tab):
 		Row = 1
-		self.Debugger = Text(Tab, width=125, height=15, undo=True, wrap=WORD, )
-		self.Debugger.grid(row=Row, column=1, columnspan=10, padx=5, pady=5, sticky=W+E+N+S)
+		Button(Tab, width = self.Button_Width_Half, text=  "TAB", command= self.Btn_Send_Tab).grid(row=Row, column=1,padx=0, pady=0, sticky=W)
+		Button(Tab, width = self.Button_Width_Half, text=  "Enter", command= self.Btn_Send_Enter).grid(row=Row, column=3,padx=0, pady=0, sticky=W)
+		Row += 1
+		Button(Tab, width = self.Button_Width_Half, text=  "Home", command= self.Btn_Send_Home).grid(row=Row, column=1,padx=0, pady=0, sticky=W)
+		Button(Tab, width = self.Button_Width_Half, text=  "Backkey", command= self.Btn_Send_Backkey).grid(row=Row, column=3,padx=0, pady=0, sticky=W)
 
 	def Get_Serial(self):
 		try:
@@ -362,6 +367,26 @@ class Automation_Execuser(Frame):
 			self.TextSerial.current(0)
 		except:	
 			pass
+
+	def Connect_Device(self):
+		IP = self.Device_IP.get("1.0", END).replace('\n', '')
+		os.popen( ADBPATH + ' connect ' + str(IP) + ':5555')
+		self.Get_Serial()	
+
+	def Btn_Send_Tab(self):
+		os.popen( ADBPATH + ' shell input keyevent \'61\'')
+	
+	def Btn_Send_Enter(self):
+		os.popen( ADBPATH + ' shell input keyevent \'66\'')	
+
+	def Btn_Send_4_Touch(self):
+		Four_Touch()
+
+	def Btn_Send_Backkey(self):
+		os.popen( ADBPATH + ' shell input keyevent \'4\'')	
+
+	def Btn_Send_Home(self):
+		os.popen( ADBPATH + ' shell input keyevent \'3\'')		
 
 	def Update_Execute_List(self):
 		print('Update execution list.')
@@ -400,9 +425,9 @@ class Automation_Execuser(Frame):
 
 	def ImportTestCase(self, Test_Case_File_Path):
 		print('Loading My Dictionary')
-		if DatabasePath != None:
-			if (os.path.isfile(DatabasePath)):
-				xlsx = load_workbook(DatabasePath)
+		if Test_Case_File_Path != None:
+			if (os.path.isfile(Test_Case_File_Path)):
+				xlsx = load_workbook(Test_Case_File_Path)
 				DictList = []
 				Dict = []
 				for sheet in xlsx:
@@ -714,7 +739,10 @@ class Automation_Execuser(Frame):
 		Test_Case = self.Str_Test_Case_Path.get()
 		Serial = self.TextSerial.get().replace('\n','')
 		#MyDB = self.Function_Import_DB(self.DB_Path)
-		
+		try:
+			self.Automation_Processor.terminate()
+		except Exception as e:
+			self.Status_Queue.put('Error: ' + str(e))
 		self.Automation_Processor = Process(target=Function_Execute_Script, args=(self.Status_Queue, self.Result_Queue, Serial, DB, Test_Case, self.TestCase, Execute_Value,))
 		#Status_Queue, Result_Queue, Serial_Nummber, DB_Path, Test_Case_Path, TestCaseObject = []
 		#self.Data_Compare_Process = Process(target=Old_Function_Compare_Excel, args=(self.Status_Queue, self.Process_Queue, Old_File, New_File, Output_Result, Sheet_Name, Index_Col, self.Background_Color, self.Font_Color,))
@@ -797,7 +825,7 @@ def Function_Execute_Script(
 	All = TestCaseObject	
 	Status_Queue.put("Importing test case config")
 
-	os.system('adb forward tcp:9889 tcp:9889')
+	#os.system('adb forward tcp:9889 tcp:9889')
 
 	AutoTester = Tester(Status_Queue, Serial_Nummber, DB_Path)
 
@@ -812,8 +840,7 @@ def Function_Execute_Script(
 	if All == None or All 	== []:
 		Status_Queue.put('Loading test case')
 		All = Function_Import_TestCase(Test_Case_Path)
-	print('all test case', All)
-
+	
 	TestCase = All['Testcase']
 	TestInfo = All['Info']
 	for detail in TestInfo:
@@ -821,15 +848,17 @@ def Function_Execute_Script(
 	
 	#AutoTester.Count_Object('UI_Inventory')
 	Test_Type = TestInfo['Type']
+	print('Test type:', Test_Type)
 	if Test_Type == 'GachaTest':
 		Data = Function_Import_Data(Test_Case_Path, TestInfo['StringID'])
 		Status_Queue.put('Update Gacha Pool')
 		AutoTester.Update_Gacha_Pool(DB_Path, TestInfo['Category'], Data)
 	
-	elif Test_Type == 'ListTest':
+	elif Test_Type in ['ListAutoTest', 'ListManualTest']:
 		Data = Function_Import_Data(Test_Case_Path, TestInfo['StringID'])
+		print('Data sheet:', Data)
 		Status_Queue.put('Update Execution List')
-		AutoTester.Update_Execution_List(DB_Path, TestInfo['Category'], Data)
+		AutoTester.Update_Execution_List(Data)
 		AutoTester.Update_Execution_Value(Execute_Value)
 
 	else:
@@ -837,17 +866,24 @@ def Function_Execute_Script(
 		pass
 
 	Dir, Name, Ext = Split_Path(Test_Case_Path)
-	Result_Path = Dir + '//Result' + '_' + Name 
+	Result_Path = Dir + '\\Result' + '_' + Name 
 	print('Result_Path', Result_Path)
 	Init_Folder(Result_Path)
 	
-	Result_File_Path = Result_Path + '//' + Name + '_' + Function_Get_TimeStamp() + Ext
+	Result_File_Path = Result_Path + '\\' + Name + '_' + Function_Get_TimeStamp() + Ext
 	print('Result_File_Path', Result_File_Path)
 	Status_Queue.put('Execute test case')
 
+	if Test_Type == 'ListAutoTest':
+		print('List data:', AutoTester.Execution_List)
+		for current_execute_value in AutoTester.Execution_List:
+			print('Current value:', current_execute_value)
+			AutoTester.Update_Execution_Value(current_execute_value)
+			Function_Execute_TestCase(TestCase, AutoTester, Test_Case_Path, Result_Path, Test_Type, Status_Queue)
+		Result = True
+	else:
+		Result = Function_Execute_TestCase(TestCase, AutoTester, Test_Case_Path, Result_Path, Test_Type, Status_Queue)
 
-
-	Result = Function_Execute_TestCase(TestCase, AutoTester, Test_Case_Path, Result_Path, Test_Type, Status_Queue)	
 	if Result == True:
 		Status_Queue.put('Test is completed')
 	else:

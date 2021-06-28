@@ -11,9 +11,9 @@ import imutils
 from nxautomation import *
 
 #cwd = os.path.dirname(os.path.realpath(__file__))
-cwd = os.path.abspath(os.path.dirname(sys.argv[0]))
+CWD = os.path.abspath(os.path.dirname(sys.argv[0]))
 
-Screenshot  = cwd + "\\"
+Screenshot  = CWD + "\\"
 
 if not os.path.isdir(Screenshot):
 	try:
@@ -21,29 +21,7 @@ if not os.path.isdir(Screenshot):
 	except OSError:
 		print ("Creation of the directory %s failed" % Screenshot)
 
-from openpyxl import load_workbook, worksheet, Workbook
-
-
-class CallCheat:
-	# Serial: Device's serial
-	# DB: Database's Path.
-	def __init__(self, Serial, DB):
-		self.UI = Function_Import_DB(DB)
-		self.Project = "V4"
-		self.Client = AdbClient(host="127.0.0.1", port=5037)
-		for d in adb.devices():
-			print(d.serial)
-		self.Device = client.device(Serial)
-
-	def Enable_MH(self):
-		pass
-
-	def Enable_Console(self):
-		pass
-
-	def Count_Object(self, Object_Image_Path):
-		
-		return
+from openpyxl import load_workbook
 
 # Return result format:
 # {
@@ -122,15 +100,19 @@ class Automation:
 		Img_Screenshot = self.Device.screencap()
 		Img_Screenshot = np.asarray(Img_Screenshot)
 		Img_Screenshot = cv2.imdecode(Img_Screenshot, cv2.IMREAD_COLOR)
-
-		result = Fast_Search(Img_Screenshot, Img_Template, 0.5)
+		try:
+			result = Get_Item(Img_Screenshot, Img_Template, 0.5)
+		except Exception as e:
+			print('Error from Tap_Item:', e)
 		if result:		
-			Tap(self.Device, result)
+			tap(self.Device, result)
 			ResultStatus = True
 		else:
 			ResultStatus = False
 
 		return self.Generate_Result(Status = ResultStatus)
+
+
 
 	def Relative_Tap(self, StringID, Delta_X=0, Delta_Y=0):
 		Img_Template = self.UI[StringID]['Image']	
@@ -139,13 +121,13 @@ class Automation:
 		Img_Screenshot = np.asarray(Img_Screenshot)
 		Img_Screenshot = cv2.imdecode(Img_Screenshot, cv2.IMREAD_COLOR)
 
-		Loc = Fast_Search(Img_Screenshot, Img_Template, 0.5)
+		Loc = Get_Item(Img_Screenshot, Img_Template, 0.5)
 		
 		Loc['x'] += int(Delta_X)
 		Loc['y'] += int(Delta_Y)
 
 		if result:		
-			Tap(self.Device, Loc)
+			tap(self.Device, Loc)
 			ResultStatus = True
 		else:
 			ResultStatus = False
@@ -198,7 +180,7 @@ class Automation:
 
 	def Find_Gacha_Frame(self):
 		#Img_Template = self.DB[StringID]['Image']
-		image_path = cwd + '\DB\\UI\\Gacha.jpg'
+		image_path = CWD + '\DB\\UI\\Gacha.jpg'
 		image = cv2.imread(image_path)
 		image = HD_Resize(image) 
 
@@ -248,7 +230,7 @@ class Automation:
 	def Quare_Detection(self):
 		filter = False
 		#Img_Template = self.DB[StringID]['Image']
-		image_path = cwd + '\DB\\UI\\Gacha 2.jpg'
+		image_path = CWD + '\DB\\UI\\Gacha 2.jpg'
 		image = cv2.imread(image_path)
 		image = HD_Resize(image) 
 
@@ -377,7 +359,7 @@ class Automation:
 		Img_Template = self.UI[StringID]['Image']
 		#Search_All_Object(Img_Screenshot, Img_Template)
 		#result = Search_Best_Match(Img_Screenshot, Img_Template)
-		result = Fast_Search(Img_Screenshot, Img_Template)
+		result = Get_Item(Img_Screenshot, Img_Template)
 		if result:
 			Swipe_Up(self.Device, result, 500)
 			ResultStatus = True
@@ -394,7 +376,7 @@ class Automation:
 
 		Template_Path = self.UI[StringID]['Path']
 		Img_Template = cv2.imread(Template_Path)
-		result = Fast_Search(Img_Screenshot, Img_Template)
+		result = Get_Item(Img_Screenshot, Img_Template)
 		if result:
 			Swipe_Up(self.Device, result, -500)
 			ResultStatus = True
@@ -407,8 +389,8 @@ class Automation:
 		self.Gacha_Pool = Function_Import_DB(DB_Path, [DB_Sheet], Pool)
 		return self.Generate_Result(Status = True)
 
-	def Update_Execution_List(self, DB_Path, DB_Sheet, Pool):
-		self.Execution_List = Function_Import_DB(DB_Path, [DB_Sheet], Pool)
+	def Update_Execution_List(self, Data):
+		self.Execution_List = Data
 		return self.Generate_Result(Status = True)
 
 	def Update_Execution_Value(self, Execute_Value):
@@ -493,7 +475,7 @@ class Automation:
 
 		return self.Generate_Result(Type = 'Execute', Status = Status_Result, Details = Fail_Details)
 
-	def Wait_For_Item(self, StringID, Match_Rate = 0.5, timeout=15):
+	def wait_for_item(self, StringID, Match_Rate = 0.5, timeout=15):
 		Start = time.time()
 		Wait_Time = timeout * 1000
 		Now = Start
@@ -523,11 +505,11 @@ class Automation:
 
 		Template_A_Path = self.UI[StringID_A]['Path']
 		Img_Template_A = cv2.imread(Template_A_Path)
-		Loc_A = Fast_Search(Img_Screenshot, Img_Template_A)
+		Loc_A = Get_Item(Img_Screenshot, Img_Template_A)
 		
 		Template_B_Path = self.UI[StringID_B]['Path']
 		Img_Template_B = cv2.imread(Template_B_Path)
-		Loc_B= Fast_Search(Img_Screenshot, Img_Template_B)
+		Loc_B= Get_Item(Img_Screenshot, Img_Template_B)
 
 		if result:
 			Swipe(self.Device, Loc_A, Loc_B)
@@ -538,37 +520,37 @@ class Automation:
 		return self.Generate_Result(Status = ResultStatus)
 
 	def Send_Enter_Key(self):
-		Send_Key(self.Device, '66')
+		send_key(self.Device, '66')
 		ResultStatus = True
 		return self.Generate_Result(Status = ResultStatus)
 
 
 	def Send_Tab_Key(self):
-		Send_Key(self.Device, '61')
+		send_key(self.Device, '61')
 		ResultStatus = True
 		return self.Generate_Result(Status = ResultStatus)
 
 	def Send_BackKey_Key(self):
-		Send_Key(self.Device, '4')
+		send_key(self.Device, '4')
 		ResultStatus = True
 		return self.Generate_Result(Status = ResultStatus)
 		
 
 	def Input_Text(self, Text):
-		Send_Text(self.Device, Text)
+		send_text(self.Device, Text)
 		ResultStatus = True
 		return self.Generate_Result(Status = ResultStatus)
 
 	def Input_Current_Value(self):
-		Send_Text(self.Device, self.Execution_Value)
+		send_text(self.Device, self.Execution_Value)
 		ResultStatus = True
 		return self.Generate_Result(Status = ResultStatus)
 
 	def Tap_Current_Item(self):
-		self.Tap_Item(self.Execution_Value)
+		self.tap_item(self.Execution_Value)
 
 	def Wait_For_Current_Item(self):
-		self.Wait_For_Item(self.Execution_Value)	
+		self.wait_for_item(self.Execution_Value)	
 
 
 
