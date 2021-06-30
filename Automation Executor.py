@@ -33,7 +33,7 @@ ADBPATH = '\"' + CWD + '\\adb\\adb.exe' + '\"'
 print('ADB path:', ADBPATH)
 #MyTranslatorAgent = 'google'
 Tool = "Automation Execuser"
-VerNum = '0.3.0b'
+VerNum = '0.3.0c'
 version = Tool  + " " +  VerNum
 DELAY1 = 20
 
@@ -273,7 +273,7 @@ class Automation_Execuser(Frame):
 		Row = 1
 		self.Device_IP = Text(Tab, width=30, height=1, undo=True, wrap=WORD)
 		self.Device_IP.grid(row=Row, column=8, columnspan=2, padx=5, pady=5, sticky=E)
-		self.Device_IP.insert("end", "192.168.100.3")
+		#self.Device_IP.insert("end", "192.168.100.3")
 		Button(Tab, width = self.Button_Width_Half, text=  "Connect", command= self.Connect_Device).grid(row=Row, column=10, padx=0, pady=0, sticky=W)
 		Row += 1
 		self.Str_DB_Path = StringVar()
@@ -872,7 +872,7 @@ def Function_Execute_Script(
 	
 	#AutoTester.Count_Object('UI_Inventory')
 	Test_Type = TestInfo['Type']
-	print('Test type:', Test_Type)
+	
 	if Test_Type == 'GachaTest':
 		Data = Function_Import_Data(Test_Case_Path, TestInfo['StringID'])
 		Status_Queue.put('Update Gacha Pool')
@@ -897,7 +897,7 @@ def Function_Execute_Script(
 	Result_File_Path = Result_Path + '\\' + Name + '_' + Function_Get_TimeStamp() + Ext
 	print('Result_File_Path', Result_File_Path)
 	Status_Queue.put('Execute test case')
-
+	Start = time.time()
 	if Test_Type == 'ListAutoTest':
 		print('List data:', AutoTester.Execution_List)
 		for current_execute_value in AutoTester.Execution_List:
@@ -913,7 +913,8 @@ def Function_Execute_Script(
 	else:
 		Status_Queue.put('Fail to execute the test')	
 	
-	
+	End = time.time()
+	Status_Queue.put('Total testing time: ' + str(int(End-Start)))	
 	#AutoTester = V4Test(Status_Queue, Serial_Nummber, DB_Path)
 	#AutoTester.Wait_For_Item('UI_BurgerMenu')
 

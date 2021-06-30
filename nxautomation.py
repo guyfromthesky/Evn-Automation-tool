@@ -1,3 +1,6 @@
+# Level 3 class
+# Upper level is testscript
+
 import os, sys
 import cv2
 import numpy as np
@@ -302,7 +305,7 @@ def Function_Import_DB(DB_Path, List_Sheet = [], List_Item = []):
 											Path = None	
 										if Path != None:
 											if os.path.isfile(Path):		
-												MyEntry['Image'] = cv2.imread(Path)
+												MyEntry['Image'] = read_img(Path)
 												MyEntry[Label] = database[ListCol[Label] + str(i+1)].value
 
 										
@@ -332,6 +335,9 @@ def tap(Device, x, y):
 def tap_object(Device, Location_Object):
 	tap(Device, Location_Object['x'], Location_Object['y'])
 	return
+
+def read_img(img_path):
+	return cv2.imdecode(np.fromfile(img_path, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
 
 def Four_Touch():
 	points = [(500,500), (1000, 500), (1000, 1000), (500, 1000)]
