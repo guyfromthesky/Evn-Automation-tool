@@ -93,26 +93,24 @@ class Automation:
 		time.sleep(STime)
 		return self.Generate_Result(Status = True)
 
-	def Tap_Item(self, StringID, ):
+	def Tap_Item(self, StringID, total_attemp = 5):
 
 		Img_Template = self.UI[StringID]['Image']	
-
-		Img_Screenshot = self.Device.screencap()
-		Img_Screenshot = np.asarray(Img_Screenshot)
-		Img_Screenshot = cv2.imdecode(Img_Screenshot, cv2.IMREAD_COLOR)
-		try:
-			result = Get_Item(Img_Screenshot, Img_Template, 0.5)
-		except Exception as e:
-			print('Error from Tap_Item:', e)
-		if result:		
-			tap(self.Device, result)
-			ResultStatus = True
-		else:
-			ResultStatus = False
-
-		return self.Generate_Result(Status = ResultStatus)
-
-
+		for i in range(total_attemp):
+				
+			Img_Screenshot = self.Device.screencap()
+			Img_Screenshot = np.asarray(Img_Screenshot)
+			Img_Screenshot = cv2.imdecode(Img_Screenshot, cv2.IMREAD_COLOR)
+			try:
+				result = Get_Item(Img_Screenshot, Img_Template, 0.5)
+			except Exception as e:
+				result = False
+				print('Error from Tap_Item:', e)
+			if result:
+				tap_object(self.Device, result)
+				return self.Generate_Result(Status = True)
+ 
+		return self.Generate_Result(Status = False)
 
 	def Relative_Tap(self, StringID, Delta_X=0, Delta_Y=0):
 		Img_Template = self.UI[StringID]['Image']	

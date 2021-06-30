@@ -26,6 +26,7 @@ from openpyxl import load_workbook
 
 from nxautomation import *
 from testscript import Automation as Tester
+from ppadb.client import Client as AdbClient
 
 CWD = os.path.abspath(os.path.dirname(sys.argv[0]))
 ADBPATH = '\"' + CWD + '\\adb\\adb.exe' + '\"'
@@ -206,11 +207,6 @@ class Automation_Execuser(Frame):
 				os.mkdir(FolderPath)
 			except OSError:
 				print ("Creation of the directory %s failed" % FolderPath)
-
-	def Function_Get_TimeStamp():		
-		now = datetime.now()
-		timestamp = str(int(datetime.timestamp(now)))			
-		return timestamp
 
 	# UI init
 	def init_UI(self):
@@ -507,7 +503,8 @@ class Automation_Execuser(Frame):
 		#self.initUI()
 
 	def Menu_Function_Open_Main_Guideline(self):
-		webbrowser.open_new(r"https://confluence.nexon.com/pages/viewpage.action?pageId=298119695")
+		#webbrowser.open_new(r"https://confluence.nexon.com/pages/viewpage.action?pageId=298119695")
+		print('Done')
 
 	def Function_Correct_Path(self, path):
 		#print("path", path)
@@ -720,7 +717,7 @@ class Automation_Execuser(Frame):
 
 	def Btn_Browse_Test_Case_File(self):
 		
-		filename = filedialog.askopenfilename(initialdir = cwd + "//Testcase", title =  self.LanguagePack.ToolTips['SelectSource'],filetypes = (("Workbook files", "*.xlsx *.xlsm"), ), multiple = False)
+		filename = filedialog.askopenfilename(initialdir = CWD + "//Testcase", title =  self.LanguagePack.ToolTips['SelectSource'],filetypes = (("Workbook files", "*.xlsx *.xlsm"), ), multiple = False)
 		#cwd
 		if filename != "":
 			self.Test_Case_Path = self.Function_Correct_Path(filename)
