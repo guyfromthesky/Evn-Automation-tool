@@ -351,6 +351,15 @@ class Automation_Execuser(Frame):
 		Button(Tab, width = self.Button_Width_Half, text=  "Home", command= self.Btn_Send_Home).grid(row=Row, column=1,padx=0, pady=0, sticky=W)
 		Button(Tab, width = self.Button_Width_Half, text=  "Backkey", command= self.Btn_Send_Backkey).grid(row=Row, column=3,padx=0, pady=0, sticky=W)
 
+		Row += 1
+		self.Str_Template_Path = StringVar()
+		Label(Tab, text= 'Template path').grid(row=Row, column=1, columnspan=2, padx=5, pady=5, sticky= W)
+		self.Entry_Old_File_Path = Entry(Tab,width = 100, state="readonly", textvariable=self.Str_Template_Path)
+		self.Entry_Old_File_Path.grid(row=Row, column=3, columnspan=5, padx=4, pady=5, sticky=E)
+		Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['Browse'], command= self.Btn_Browse_Template_File).grid(row=Row, column=8, padx=0, pady=0, sticky=W)
+		Button(Tab, width = self.Button_Width_Half, text= 'Tap', command= self.Btn_Tap_Template).grid(row=Row, column=9, columnspan=2,padx=5, pady=5, sticky=W)
+		
+
 	def Get_Serial(self):
 		try:
 			client = AdbClient(host="127.0.0.1", port=5037)
@@ -383,6 +392,13 @@ class Automation_Execuser(Frame):
 
 	def Btn_Send_Home(self):
 		os.popen( ADBPATH + ' shell input keyevent \'3\'')		
+
+	def Btn_Tap_Template(self):
+		if self.Template_Path != None:
+			self.Get_Serial()
+			Serial = self.TextSerial.get().replace('\n','')
+			AutoTester = Tester(self.Status_Queue, Serial, self.DB_Path)
+			AutoTester.Tap_Template(self.Template_Path)
 
 	def Update_Execute_List(self):
 		print('Update execution list.')
@@ -710,6 +726,17 @@ class Automation_Execuser(Frame):
 		if filename != "":
 			self.DB_Path = self.Function_Correct_Path(filename)
 			self.Str_DB_Path.set(self.DB_Path)
+			self.Notice.set(self.LanguagePack.ToolTips['SourceSelected'])
+		else:
+			self.Notice.set(self.LanguagePack.ToolTips['SourceDocumentEmpty'])
+		return
+
+	def Btn_Browse_Template_File(self):
+			
+		filename = filedialog.askopenfilename(title =  self.LanguagePack.ToolTips['SelectSource'],filetypes = (("Template files", "*.jpg *.png"), ), multiple = False)	
+		if filename != "":
+			self.Template_Path = self.Function_Correct_Path(filename)
+			self.Str_Template_Path.set(filename)
 			self.Notice.set(self.LanguagePack.ToolTips['SourceSelected'])
 		else:
 			self.Notice.set(self.LanguagePack.ToolTips['SourceDocumentEmpty'])

@@ -499,24 +499,17 @@ def Get_Item(Img_Screenshot, Img_Template, Match_Rate=0.50):
 	Found = None
 	Loc = None
 	Results = []
-	counter = 0
-	for scale in np.linspace(0.2, 1.0, 20)[::-1]:
-		counter +=1
-		resized = imutils.resize(gray, width = int(gray.shape[1] * scale))
-		r = gray.shape[1] / float(resized.shape[1])
-		if resized.shape[0] < tH or resized.shape[1] < tW:
-			break
-		result = cv2.matchTemplate(resized, template, cv2.TM_CCOEFF_NORMED)
-		(_, maxVal, _, maxLoc) = cv2.minMaxLoc(result)
+	#for scale in np.linspace(0.2, 1.0, 20)[::-1]:
+	result = cv2.matchTemplate(gray, template, cv2.TM_CCOEFF_NORMED)
+	(_, maxVal, _, maxLoc) = cv2.minMaxLoc(result)
 
-		if Found is None or maxVal > Found[0]:
-			Found = (maxVal, maxLoc, r)
-			if maxVal >= Match_Rate:
-				
-				(startX, startY) = (int(maxLoc[0] * r), int(maxLoc[1] * r))
-				(endX, endY) = (int((maxLoc[0] + tW) * r), int((maxLoc[1] + tH) * r))
-				Loc = {"x": int((maxLoc[0] + 0.5 * tW) * r), "y": int((maxLoc[1] + 0.5 * tH) * r), "w": int(abs(startX-endX)), "h": int(abs(startY-endY))}
-				break
+	if Found is None or maxVal > Found[0]:
+		Found = (maxVal, maxLoc)
+		if maxVal >= Match_Rate:
+			
+			(startX, startY) = (int(maxLoc[0]), int(maxLoc[1]))
+			(endX, endY) = (int((maxLoc[0] + tW)), int((maxLoc[1] + tH)))
+			Loc = {"x": int((maxLoc[0] + 0.5 * tW)), "y": int((maxLoc[1] + 0.5 * tH)), "w": int(abs(startX-endX)), "h": int(abs(startY-endY))}
 
 	if Loc != None:
 		print('Loc', Loc)

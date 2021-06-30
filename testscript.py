@@ -112,6 +112,28 @@ class Automation:
  
 		return self.Generate_Result(Status = False)
 
+	def Tap_Template(self, image_path, total_attemp = 5):
+		if not os.path.isfile(image_path):
+			return self.Generate_Result(Status = False)
+
+		Img_Template = cv2.imread(image_path)
+			
+		for i in range(total_attemp):
+				
+			Img_Screenshot = self.Device.screencap()
+			Img_Screenshot = np.asarray(Img_Screenshot)
+			Img_Screenshot = cv2.imdecode(Img_Screenshot, cv2.IMREAD_COLOR)
+			try:
+				result = Get_Item(Img_Screenshot, Img_Template, 0.5)
+			except Exception as e:
+				result = False
+				print('Error from Tap_Item:', e)
+			if result:
+				tap_object(self.Device, result)
+				return self.Generate_Result(Status = True)
+ 
+		return self.Generate_Result(Status = False)
+
 	def Relative_Tap(self, StringID, Delta_X=0, Delta_Y=0):
 		Img_Template = self.UI[StringID]['Image']	
 
