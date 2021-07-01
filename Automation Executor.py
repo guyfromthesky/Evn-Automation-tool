@@ -1,6 +1,5 @@
 #System variable and io handling
-from genericpath import isfile
-import sys, getopt
+import sys
 import os
 import multiprocessing
 from multiprocessing import Process , Queue, Manager
@@ -8,7 +7,7 @@ import queue
 import subprocess
 #Get timestamp
 import time
-from datetime import datetime
+#from datetime import datetime
 import configparser
 
 #GUI
@@ -24,7 +23,7 @@ from tkinter import scrolledtext
 
 from openpyxl import load_workbook
 
-from nxautomation import *
+from general_function import *
 from testscript import Automation as Tester
 from ppadb.client import Client as AdbClient
 
@@ -345,18 +344,19 @@ class Automation_Execuser(Frame):
 
 	def Generate_Debugger_UI(self,Tab):
 		Row = 1
-		Button(Tab, width = self.Button_Width_Half, text=  "TAB", command= self.Btn_Send_Tab).grid(row=Row, column=1,padx=0, pady=0, sticky=W)
-		Button(Tab, width = self.Button_Width_Half, text=  "Enter", command= self.Btn_Send_Enter).grid(row=Row, column=3,padx=0, pady=0, sticky=W)
+		Button(Tab, width = self.Button_Width_Half, text=  "TAB", command= self.Btn_Send_Tab).grid(row=Row, column=1,padx=5, pady=5, sticky=W)
+		Button(Tab, width = self.Button_Width_Half, text=  "Enter", command= self.Btn_Send_Enter).grid(row=Row, column=2,padx=5, pady=5, sticky=W)
+		Button(Tab, width = self.Button_Width_Half, text=  "4 touch", command= self.Btn_Send_4_Touch).grid(row=Row, column=3,padx=5, pady=5, sticky=W)
 		Row += 1
-		Button(Tab, width = self.Button_Width_Half, text=  "Home", command= self.Btn_Send_Home).grid(row=Row, column=1,padx=0, pady=0, sticky=W)
-		Button(Tab, width = self.Button_Width_Half, text=  "Backkey", command= self.Btn_Send_Backkey).grid(row=Row, column=3,padx=0, pady=0, sticky=W)
+		Button(Tab, width = self.Button_Width_Half, text=  "Home", command= self.Btn_Send_Home).grid(row=Row, column=1,padx=5, pady=5, sticky=W)
+		Button(Tab, width = self.Button_Width_Half, text=  "Backkey", command= self.Btn_Send_Backkey).grid(row=Row, column=2,padx=5, pady=5, sticky=W)
 
 		Row += 1
 		self.Str_Template_Path = StringVar()
 		Label(Tab, text= 'Template path').grid(row=Row, column=1, columnspan=2, padx=5, pady=5, sticky= W)
 		self.Entry_Old_File_Path = Entry(Tab,width = 100, state="readonly", textvariable=self.Str_Template_Path)
-		self.Entry_Old_File_Path.grid(row=Row, column=3, columnspan=5, padx=4, pady=5, sticky=E)
-		Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['Browse'], command= self.Btn_Browse_Template_File).grid(row=Row, column=8, padx=0, pady=0, sticky=W)
+		self.Entry_Old_File_Path.grid(row=Row, column=2, columnspan=5, padx=5, pady=5, sticky=E)
+		Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['Browse'], command= self.Btn_Browse_Template_File).grid(row=Row, column=8, padx=5, pady=5, sticky=W)
 		Button(Tab, width = self.Button_Width_Half, text= 'Tap', command= self.Btn_Tap_Template).grid(row=Row, column=9, columnspan=2,padx=5, pady=5, sticky=W)
 		
 
@@ -385,6 +385,7 @@ class Automation_Execuser(Frame):
 		os.popen( ADBPATH + ' shell input keyevent \'66\'')	
 
 	def Btn_Send_4_Touch(self):
+		os.system( ADBPATH + ' forward tcp:9889 tcp:9889')
 		Four_Touch()
 
 	def Btn_Send_Backkey(self):
@@ -849,7 +850,7 @@ def Function_Execute_Script(
 	All = TestCaseObject	
 	Status_Queue.put("Importing test case config")
 
-	#os.system('adb forward tcp:9889 tcp:9889')
+	os.system( ADBPATH + ' forward tcp:9889 tcp:9889')
 
 	AutoTester = Tester(Status_Queue, Serial_Nummber, DB_Path)
 

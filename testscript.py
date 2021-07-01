@@ -4,11 +4,10 @@ from ppadb.client import Client as AdbClient
 import os, sys
 import cv2
 import numpy as np
-from datetime import datetime
 import time
-import imutils
+#import imutils
 
-from nxautomation import *
+from general_function import *
 
 #cwd = os.path.dirname(os.path.realpath(__file__))
 CWD = os.path.abspath(os.path.dirname(sys.argv[0]))
