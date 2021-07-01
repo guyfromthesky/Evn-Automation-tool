@@ -681,7 +681,7 @@ def Function_Execute_TestCase(TestSteps, Controller, TestCase_Path, Result_Path,
 
 			ResultComment.append(TextResult)
 
-			Status_Queue.put(str(TextResult))
+			#Status_Queue.put(str(TextResult))
 
 		else:
 			Steps = Step['Step']
@@ -718,7 +718,7 @@ def Function_Execute_TestCase(TestSteps, Controller, TestCase_Path, Result_Path,
 					ResultComment.append(TextResult)
 					#CurTime = Function_Get_TimeStamp()
 					#ResultLine = CurTime + ': ' + TextResult
-					Status_Queue.put(str(TextResult))
+					#Status_Queue.put(str(TextResult))
 		
 		#Dir, Name, Ext = Split_Path(TestCase_Path)
 

@@ -7,7 +7,7 @@ import queue
 import subprocess
 #Get timestamp
 import time
-#from datetime import datetime
+from datetime import datetime
 import configparser
 
 #GUI
@@ -32,9 +32,10 @@ ADBPATH = '\"' + CWD + '\\adb\\adb.exe' + '\"'
 print('ADB path:', ADBPATH)
 #MyTranslatorAgent = 'google'
 Tool = "Automation Execuser"
-VerNum = '0.3.0c'
+VerNum = '0.3.0d'
 version = Tool  + " " +  VerNum
 DELAY1 = 20
+DELAY2 = 100
 
 class AutocompleteCombobox(Combobox):
 
@@ -173,20 +174,28 @@ class Automation_Execuser(Frame):
 		try:
 			print('Start server')
 			os.popen( ADBPATH + ' start-server')
-			os.popen( ADBPATH + ' tcpip 5555')
-			print('Get CPU profile')
-			self.CPU = os.popen(ADBPATH + ' shell getprop ro.product.cpu.abi').read()
-			self.CPU = self.CPU.replace('\n', "").trim()
-			print(self.CPU)
-			print('Push touch to device')	
-			if self.CPU == "":
-				print('adb push \"%s/libs/%s/touch\" /data/local/tmp' % (CWD, self.CPU))
-				os.system(ADBPATH + ' push \"%s/libs/%s/touch\" /data/local/tmp' % (CWD, self.CPU)) 
 			
-		except:
-			pass
+			print('Get CPU profile')
+			#self.CPU = os.popen(ADBPATH + ' shell getprop ro.product.cpu.abi').read()
+			process = subprocess.Popen(ADBPATH + ' shell getprop ro.product.cpu.abi', stdout=subprocess.PIPE, stderr=None, shell=True)
+			CPU = process.communicate()[0].decode("utf-8") 
+			CPUFamily = CPU.replace('\n', "")
+			print('CPU family: ', CPUFamily)
+			print('Push touch to device')	
+			if CPUFamily == "":
+				print('Push touch to device')	
+				os.system(ADBPATH + ' push \"%s/libs/%s/touch\" /data/local/tmp' % (CWD, CPUFamily))
+				print('Launch touch on device')
+				os.system(ADBPATH + ' shell chmod 755 /data/local/tmp/touch') 
+				os.system(ADBPATH + ' shell /data/local/tmp/touch') 
+				os.system(ADBPATH + ' forward tcp:9889 tcp:9889') 
+
+		except Exception as e:
+			print('Error:', e)
+	
 		print('Get device serial')
 		self.Get_Serial()
+		self.after(DELAY2, self.status_listening)
 
 	def Config_Init(self):
 		self.Roaming = os.environ['APPDATA'] + '\\NX Automation'
@@ -327,7 +336,7 @@ class Automation_Execuser(Frame):
 		self.TextSerial = AutocompleteCombobox(Tab)
 		self.TextSerial.Set_Entry_Width(30)
 		
-		self.TextSerial.grid(row=Row, column=2, columnspan=4, padx=5, pady=5, sticky=W)
+		self.TextSerial.grid(row=Row, column=3, columnspan=4, padx=5, pady=5, sticky=W)
 		self.TextSerial.set_completion_list([])
 
 		Button(Tab, width = self.Button_Width_Half, text=  "Get Device", command= self.Get_Serial).grid(row=Row, column=7,padx=0, pady=0, sticky=W)
@@ -353,9 +362,9 @@ class Automation_Execuser(Frame):
 
 		Row += 1
 		self.Str_Template_Path = StringVar()
-		Label(Tab, text= 'Template path').grid(row=Row, column=1, columnspan=2, padx=5, pady=5, sticky= W)
-		self.Entry_Old_File_Path = Entry(Tab,width = 100, state="readonly", textvariable=self.Str_Template_Path)
-		self.Entry_Old_File_Path.grid(row=Row, column=2, columnspan=5, padx=5, pady=5, sticky=E)
+		Label(Tab, text= 'Template path').grid(row=Row, column=1, padx=5, pady=5, sticky= W)
+		self.Entry_Old_File_Path = Entry(Tab,width = 90, state="readonly", textvariable=self.Str_Template_Path)
+		self.Entry_Old_File_Path.grid(row=Row, column=3, columnspan=5, padx=5, pady=5, sticky=W)
 		Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['Browse'], command= self.Btn_Browse_Template_File).grid(row=Row, column=8, padx=5, pady=5, sticky=W)
 		Button(Tab, width = self.Button_Width_Half, text= 'Tap', command= self.Btn_Tap_Template).grid(row=Row, column=9, columnspan=2,padx=5, pady=5, sticky=W)
 		
@@ -375,6 +384,7 @@ class Automation_Execuser(Frame):
 
 	def Connect_Device(self):
 		IP = self.Device_IP.get("1.0", END).replace('\n', '')
+		os.popen( ADBPATH + ' tcpip 5555')
 		os.popen( ADBPATH + ' connect ' + str(IP) + ':5555')
 		self.Get_Serial()	
 
@@ -417,8 +427,8 @@ class Automation_Execuser(Frame):
 				self.Automation_Processor.terminate()
 		except:
 			pass
-		self.Notice.set('Translate Process has been stop')
-		return
+		self.Show_Error_Message('Test is terminated')
+
 
 	# Other function
 	def ClearLog(self):
@@ -767,35 +777,33 @@ class Automation_Execuser(Frame):
 		try:
 			self.Automation_Processor.terminate()
 		except Exception as e:
-			self.Status_Queue.put('Error: ' + str(e))
+			pass
 		self.Automation_Processor = Process(target=Function_Execute_Script, args=(self.Status_Queue, self.Result_Queue, Serial, DB, Test_Case, self.TestCase, Execute_Value,))
 		#Status_Queue, Result_Queue, Serial_Nummber, DB_Path, Test_Case_Path, TestCaseObject = []
 		#self.Data_Compare_Process = Process(target=Old_Function_Compare_Excel, args=(self.Status_Queue, self.Process_Queue, Old_File, New_File, Output_Result, Sheet_Name, Index_Col, self.Background_Color, self.Font_Color,))
 		self.Automation_Processor.start()
 		self.after(DELAY1, self.Wait_For_Automation_Processor)	
 
-	def Wait_For_Automation_Processor(self):
-		if (self.Automation_Processor.is_alive()):
+	def status_listening(self):
+		while True:
 			try:
 				Status = self.Status_Queue.get(0)
 				if Status != None:
 					self.Debugger.insert("end", "\n\r")
-					self.Debugger.insert("end", Status)
+					ct = datetime.now()
+					self.Debugger.insert("end", str(ct) + ": " + Status)
 					self.Debugger.yview(END)
 			except queue.Empty:
-				pass	
+				break
+		#self.check_device_connection()
+		self.after(DELAY2, self.status_listening)
+
+	def Wait_For_Automation_Processor(self):
+		if (self.Automation_Processor.is_alive()):	
 			self.after(DELAY1, self.Wait_For_Automation_Processor)
 		else:
-			try:
-				Status = self.Status_Queue.get(0)
-				if Status != None:	
-					self.Debugger.insert("end", "\n\r")
-					self.Debugger.insert("end", Status)
-					self.Debugger.yview(END)
-			except queue.Empty:
-				pass
 			self.Automation_Processor.terminate()
-			self.Show_Error_Message('Test is completed')
+			#self.Show_Error_Message('Test is completed')
 
 	def Btn_Generate_TestCase(self):
 		DB = self.Str_DB_Path.get()
@@ -839,7 +847,11 @@ class Automation_Execuser(Frame):
 
 ###########################################################################################
 
-
+	def check_device_connection(self):
+		process = subprocess.Popen(ADBPATH + ' devices', stdout=subprocess.PIPE, stderr=None, shell=True)
+		device = process.communicate()[0].decode("utf-8") 
+		print(device)
+		return device
 	
 
 ###########################################################################################
@@ -850,7 +862,7 @@ def Function_Execute_Script(
 	All = TestCaseObject	
 	Status_Queue.put("Importing test case config")
 
-	os.system( ADBPATH + ' forward tcp:9889 tcp:9889')
+	#os.system( ADBPATH + ' forward tcp:9889 tcp:9889')
 
 	AutoTester = Tester(Status_Queue, Serial_Nummber, DB_Path)
 
@@ -915,7 +927,7 @@ def Function_Execute_Script(
 		Status_Queue.put('Fail to execute the test')	
 	
 	End = time.time()
-	Status_Queue.put('Total testing time: ' + str(int(End-Start)))	
+	Status_Queue.put('Total testing time: ' + str(int(End-Start)) + " seconds.")	
 	#AutoTester = V4Test(Status_Queue, Serial_Nummber, DB_Path)
 	#AutoTester.Wait_For_Item('UI_BurgerMenu')
 
@@ -926,8 +938,6 @@ def Function_Generate_Testcase(
 		Status_Queue.put("Testcase is not exist")
 		return
 		
-	Status_Queue.put("Importing test case config")
-	
 	All = Function_Import_TestCase(Test_Case_Path)
 	
 	TestCase = All['Testcase']
