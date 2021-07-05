@@ -766,8 +766,8 @@ class Automation_Execuser(Frame):
 		return
 
 	def Btn_Execute_Script(self):
-		if self.TestCase == None:
-			self.Btn_Generate_TestCase()
+	
+		self.Btn_Generate_TestCase()
 
 		DB = self.Str_DB_Path.get()
 		Execute_Value = self.ExecuteList.get().replace('\n','')
