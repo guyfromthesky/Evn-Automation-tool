@@ -174,21 +174,41 @@ class Automation_Execuser(Frame):
 		try:
 			print('Start server')
 			os.popen( ADBPATH + ' start-server')
-			
+			app_name = 'android_touch'
 			print('Get CPU profile')
 			#self.CPU = os.popen(ADBPATH + ' shell getprop ro.product.cpu.abi').read()
 			process = subprocess.Popen(ADBPATH + ' shell getprop ro.product.cpu.abi', stdout=subprocess.PIPE, stderr=None, shell=True)
 			CPU = process.communicate()[0].decode("utf-8") 
-			CPUFamily = CPU.replace('\n', "")
+			CPUFamily = CPU.replace('\r\n', "")
 			print('CPU family: ', CPUFamily)
-			print('Push touch to device')	
-			if CPUFamily == "":
-				print('Push touch to device')	
-				os.system(ADBPATH + ' push \"%s/libs/%s/touch\" /data/local/tmp' % (CWD, CPUFamily))
+			self.port = 0
+			if CPUFamily != "":
+				print('Push touch to device')
+				if (os.path.isfile(CWD + '\\libs\\arm64-v8a\\touch')):
+					print('file available')
+				str_command = '%s push \"%s\\libs\\%s\\touch\" /data/local/tmp' % (ADBPATH, CWD, CPUFamily)
+				print('Command:', str_command)
+				os.system(str_command)
 				print('Launch touch on device')
 				os.system(ADBPATH + ' shell chmod 755 /data/local/tmp/touch') 
-				os.system(ADBPATH + ' shell /data/local/tmp/touch') 
-				os.system(ADBPATH + ' forward tcp:9889 tcp:9889') 
+				os.system(ADBPATH + ' shell /data/local/tmp/touch')
+				print('Looking for port')
+				for port in range(50000,65535):
+					self.port = port
+					process = subprocess.Popen(ADBPATH + ' forward tcp:8080 tcp:' + str(self.port), stdout=subprocess.PIPE, stderr=None, shell=True)
+					return_message = process.communicate()
+					for message in return_message:
+						if message != None:
+							str_message = message.decode("utf-8") 
+							if str_message == self.port:
+								break
+		 
+					print('str_message', str_message)
+					return_port = str_message.replace('\r\n', "")
+					print('return_port', return_port)
+					if return_port == self.port:
+						break
+			print('Current port:', self.port)
 
 		except Exception as e:
 			print('Error:', e)
@@ -864,7 +884,15 @@ def Function_Execute_Script(
 
 	#os.system( ADBPATH + ' forward tcp:9889 tcp:9889')
 
-	AutoTester = Tester(Status_Queue, Serial_Nummber, DB_Path)
+	Dir, Name, Ext = Split_Path(Test_Case_Path)
+	Result_Folder_Path = Dir + '\\Result' + '_' + Name + '_' + Function_Get_TimeStamp()
+	print('Result_Path', Result_Folder_Path)
+	Init_Folder(Result_Folder_Path)
+	
+	Result_File_Path = Result_Folder_Path + '\\' + Name + '_' + Function_Get_TimeStamp() + Ext
+	print('Result_File_Path', Result_File_Path)
+
+	AutoTester = Tester(Status_Queue, Serial_Nummber, DB_Path, Result_Folder_Path)
 
 	Connect_Status = AutoTester.Check_Connectivity()
 	if Connect_Status == False:
@@ -902,13 +930,6 @@ def Function_Execute_Script(
 		#Default type = General
 		pass
 
-	Dir, Name, Ext = Split_Path(Test_Case_Path)
-	Result_Path = Dir + '\\Result' + '_' + Name 
-	print('Result_Path', Result_Path)
-	Init_Folder(Result_Path)
-	
-	Result_File_Path = Result_Path + '\\' + Name + '_' + Function_Get_TimeStamp() + Ext
-	print('Result_File_Path', Result_File_Path)
 	Status_Queue.put('Execute test case')
 	Start = time.time()
 	if Test_Type == 'ListAutoTest':
@@ -916,10 +937,10 @@ def Function_Execute_Script(
 		for current_execute_value in AutoTester.Execution_List:
 			print('Current value:', current_execute_value)
 			AutoTester.Update_Execution_Value(current_execute_value)
-			Function_Execute_TestCase(TestCase, AutoTester, Test_Case_Path, Result_Path, Test_Type, Status_Queue)
+			Function_Execute_TestCase(TestCase, AutoTester, Test_Case_Path, Result_Folder_Path, Test_Type, Status_Queue)
 		Result = True
 	else:
-		Result = Function_Execute_TestCase(TestCase, AutoTester, Test_Case_Path, Result_Path, Test_Type, Status_Queue)
+		Result = Function_Execute_TestCase(TestCase, AutoTester, Test_Case_Path, Result_Folder_Path, Test_Type, Status_Queue)
 
 	if Result == True:
 		Status_Queue.put('Test is completed')

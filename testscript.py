@@ -33,23 +33,25 @@ from openpyxl import load_workbook
 class Automation:
 	# Serial: Device's serial
 	# DB: Database's Path.
-	def __init__(self, Status_Queue, Serial, DB_Path):
+	def __init__(self, Status_Queue, Serial, DB_Path=None, Result_Path = None):
 		self.Debugger = Status_Queue
 		#self.Companion = Function_Import_DB(DB_Path, ['Companion'])
 		#self.Project = "V4"
-		self.Client = AdbClient(host="127.0.0.1", port=5037)
+		self.Client = AdbClient(host="127.0.0.1", port=8080)
 		self.Device = self.Client.device(Serial)
 		self.Gacha_Pool = []
 		self.Execution_List = []
 		self.Current_Value = None
 		self.Item_List = []
 		self.Result_Array = []
-		self.DB_Path = self.Get_Folder(DB_Path)
-		self.UI = Function_Import_DB(DB_Path, ['UI'])
+		if DB_Path != None:
+			self.DB_Path = self.Get_Folder(DB_Path)
+			self.UI = Function_Import_DB(DB_Path, ['UI'])
+		if Result_Path != None:
+			self.Result_Path = self.Get_Folder(Result_Path)	
 
 
 	def Get_Folder(self, Path):
-
 		return os.path.dirname(Path)
 		 
 	def Add_DB_Path(self, Path):
@@ -391,7 +393,10 @@ class Automation:
 
 	def Wait_For_Current_Item(self):
 		self.wait_for_item(self.Execution_Value)	
-
-
-
-#V4 = V4Test()
+	
+	def Get_Screenshot(self, Name = 'Screenshot_'):
+		Image = self.Device.screencap()
+		Img_Name = Correct_Path(Name + Function_Get_TimeStamp() + '.png', self.Result_Path)
+		with open(Img_Name, "wb") as fp:
+			fp.write(Image)
+		return	

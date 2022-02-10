@@ -1,16 +1,21 @@
 from touch import TouchActionBuilder
-import os, sys
+import os, sys, subprocess
 CWD = os.path.abspath(os.path.dirname(sys.argv[0]))
 ADBPATH = '\"' + CWD + '\\adb\\adb.exe' + '\"'
 os.popen( ADBPATH + ' kill-server')
 os.popen( ADBPATH + ' start-server')
-
+#os.popen( ADBPATH + ' usb')
 os.popen( ADBPATH + ' shell chmod 755 /data/local/tmp/touch')
 os.popen( ADBPATH + ' shell /data/local/tmp/touch')
 
-os.popen( ADBPATH + ' forward tcp:9889 tcp:9889')
-
-os.system('curl http://localhost:9889')
+#os.popen( ADBPATH + ' forward tcp:50001 tcp:8080')
+process = subprocess.Popen(ADBPATH + ' forward tcp:50001 tcp:8080', stdout=subprocess.PIPE, stderr=None, shell=True)
+return_message = process.communicate()
+for message in return_message:
+	if message != None:
+		str_message = message.decode("utf-8") 
+		print('str_message', str_message)
+#os.system('curl http://localhost:50001')
 
 x1 = 10
 y1 = 10

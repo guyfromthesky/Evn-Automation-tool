@@ -57,7 +57,7 @@ class TouchActionBuilder:
     def send_commands(self, commands, print_json=False):
         data=json.dumps(commands).encode('utf-8')
         #print('data', data)
-        req = urllib.request.Request('http://localhost:9889', data=data,
+        req = urllib.request.Request('http://localhost:8080', data=data,
                              headers={'content-type': 'application/json'})
         urllib.request.urlopen(req)    
         if print_json:
