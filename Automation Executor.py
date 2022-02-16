@@ -9,6 +9,7 @@ import subprocess
 import time
 from datetime import datetime
 import configparser
+import random
 
 #GUI
 from tkinter import *
@@ -23,87 +24,27 @@ from tkinter import scrolledtext
 
 from openpyxl import load_workbook
 
+
 from general_function import *
-from testscript import Automation as Tester
+# Function use for the action builder here
+from automation_driver import Automation as Tester
 from ppadb.client import Client as AdbClient
+
+from libs.configmanager import ConfigLoader
+from libs.version import get_version
+from libs.tkinter_extension import AutocompleteCombobox
+import cv2
+import pytesseract
+
 
 CWD = os.path.abspath(os.path.dirname(sys.argv[0]))
 ADBPATH = '\"' + CWD + '\\adb\\adb.exe' + '\"'
-print('ADB path:', ADBPATH)
 #MyTranslatorAgent = 'google'
 Tool = "Automation Execuser"
 VerNum = '0.3.0d'
 version = Tool  + " " +  VerNum
 DELAY1 = 20
 DELAY2 = 100
-
-class AutocompleteCombobox(Combobox):
-
-	def set_completion_list(self, completion_list):
-		"""Use our completion list as our drop down selection menu, arrows move through menu."""
-		self._completion_list = sorted(completion_list, key=str.lower) # Work with a sorted list
-		self._hits = []
-		self._hit_index = 0
-		self.position = 0
-		self.bind('<KeyRelease>', self.handle_keyrelease)
-		self['values'] = self._completion_list  # Setup our popup menu
-		#self._w = 10
-		self.delete(0,END)	
-
-	def Set_Entry_Width(self, width):
-		self.configure(width=width)
-
-	def Set_Display_Item(self, Item):
-		
-		return
-
-	def Set_DropDown_Width(self, width):
-		print('Change size: ', width)
-		style = Style()
-		style.configure('TCombobox', postoffset=(0,0,width,0))
-		self.configure(style='TCombobox')
-
-	def autocomplete(self, delta=0):
-		"""autocomplete the Combobox, delta may be 0/1/-1 to cycle through possible hits"""
-		if delta: # need to delete selection otherwise we would fix the current position
-			self.delete(self.position, END)
-		else: # set position to end so selection starts where textentry ended
-			self.position = len(self.get())
-		# collect hits
-		_hits = []
-		for element in self._completion_list:
-			if element.lower().startswith(self.get().lower()): # Match case insensitively
-				_hits.append(element)
-		# if we have a new hit list, keep this in mind
-		if _hits != self._hits:
-			self._hit_index = 0
-			self._hits=_hits
-		# only allow cycling if we are in a known hit list
-		if _hits == self._hits and self._hits:
-			self._hit_index = (self._hit_index + delta) % len(self._hits)
-		# now finally perform the auto completion
-		if self._hits:
-			self.delete(0,END)
-			self.insert(0,self._hits[self._hit_index])
-			self.select_range(self.position,END)
-
-	def handle_keyrelease(self, event):
-		"""event handler for the keyrelease event on this widget"""
-		if event.keysym == "BackSpace":
-			self.delete(self.index(INSERT), END)
-			self.position = self.index(END)
-		if event.keysym == "Left":
-			if self.position < self.index(END): # delete the selection
-				self.delete(self.position, END)
-			else:
-				self.position = self.position-1 # delete one character
-				self.delete(self.position, END)
-		if event.keysym == "Right":
-			self.position = self.index(END) # go to end (no selection)
-		if len(event.keysym) == 1:
-			self.autocomplete()
-
-
 
 #**********************************************************************************
 # UI handle ***********************************************************************
@@ -124,8 +65,6 @@ class Automation_Execuser(Frame):
 
 		self.Manager = Manager['Default_Manager']
 
-		self.Config_Init()
-
 		self.Options = {}
 
 		# UI Variable
@@ -145,12 +84,13 @@ class Automation_Execuser(Frame):
 
 
 		self.App_LanguagePack = {}
-		self.initGeneralSetting()
+
+		self.init_App_Setting()
 
 		if self.AppLanguage != 'kr':
-			from languagepack import LanguagePackEN as LanguagePack
+			from libs.languagepack import LanguagePackEN as LanguagePack
 		else:
-			from languagepack import LanguagePackKR as LanguagePack
+			from libs.languagepack import LanguagePackKR as LanguagePack
 
 		self.LanguagePack = LanguagePack
 
@@ -169,8 +109,8 @@ class Automation_Execuser(Frame):
 		self.Generate_Menu_UI()
 		self.Generate_Tab_UI()
 		self.init_UI()
-		self.init_UI_Configuration()
-
+		self.init_UI_Data()
+		'''
 		try:
 			print('Start server')
 			os.popen( ADBPATH + ' start-server')
@@ -212,34 +152,17 @@ class Automation_Execuser(Frame):
 
 		except Exception as e:
 			print('Error:', e)
-	
+		'''
+		
 		print('Get device serial')
 		self.Get_Serial()
 		self.after(DELAY2, self.status_listening)
-
-	def Config_Init(self):
-		self.Roaming = os.environ['APPDATA'] + '\\NX Automation'
-		self.AppConfig = self.Roaming + '\\config.ini'
-	
-		if not os.path.isdir(self.Roaming):
-			try:
-				os.mkdir(self.Roaming)
-			except OSError:
-				print ("Creation of the directory %s failed" % self.Roaming)
-		else:
-			print('Roaming folder exist.')
-
-	def Init_Folder(FolderPath):
-		if not os.path.isdir(FolderPath):
-			try:
-				os.mkdir(FolderPath)
-			except OSError:
-				print ("Creation of the directory %s failed" % FolderPath)
 
 	# UI init
 	def init_UI(self):
 	
 		self.Generate_Automation_Execution_UI(self.Main)
+		self.Generate_OCR_Setting_UI(self.OCR_SETTING)
 		self.Generate_Debugger_UI(self.Controller)
 		#self.Generate_Folder_Comparision_UI(self.FolderComparison)
 		#self.Generate_Optimizer_UI(self.Optimizer)
@@ -275,6 +198,8 @@ class Automation_Execuser(Frame):
 		self.Main = ttk.Frame(self.TAB_CONTROL)
 		self.TAB_CONTROL.add(self.Main, text= 'Main')
 		
+		self.OCR_SETTING = Frame(self.TAB_CONTROL)
+		self.TAB_CONTROL.add(self.OCR_SETTING, text= 'OCR Setting')
 		#Tab
 		self.Controller = ttk.Frame(self.TAB_CONTROL)
 		self.TAB_CONTROL.add(self.Controller, text= 'Controller')
@@ -299,40 +224,32 @@ class Automation_Execuser(Frame):
 	def Generate_Automation_Execution_UI(self, Tab):
 		
 		Row = 1
-		self.Device_IP = Text(Tab, width=30, height=1, undo=True, wrap=WORD)
-		self.Device_IP.grid(row=Row, column=8, columnspan=2, padx=5, pady=5, sticky=E)
-		#self.Device_IP.insert("end", "192.168.100.3")
-		Button(Tab, width = self.Button_Width_Half, text=  "Connect", command= self.Connect_Device).grid(row=Row, column=10, padx=0, pady=0, sticky=W)
-		Row += 1
-		self.Str_DB_Path = StringVar()
-		self.Str_DB_Path.set( CWD + '\\DB\\db.xlsx')
-		Label(Tab, text=  self.LanguagePack.Label['MainDB']).grid(row=Row, column=1, columnspan=2, padx=5, pady=5, sticky= W)
-		self.Entry_Old_File_Path = Entry(Tab,width = 130, state="readonly", textvariable=self.Str_DB_Path)
-		self.Entry_Old_File_Path.grid(row=Row, column=3, columnspan=7, padx=4, pady=5, sticky=E)
-		Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['Browse'], command= self.Btn_Browse_DB_File).grid(row=Row, column=10, padx=0, pady=0, sticky=W)
-		#Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['SelectBGColor'], command= self.Btn_Select_Background_Colour).grid(row=Row, column=9, columnspan=2,padx=5, pady=5, sticky=W)
-		
-		#Btn_Generate_TestCase
 
-		Row += 1
-		self.Str_Test_Case_Path = StringVar()
 		#self.Str_Test_Case_Path.set( CWD + '\\Testcase\\Sample_Automation_Testcase.xlsx')
 		Label(Tab, text=  self.LanguagePack.Label['TestCaseList']).grid(row=Row, column=1, columnspan=2, padx=5, pady=5, sticky= W)
-		self.Entry_New_File_Path = Entry(Tab,width = 130, state="readonly", textvariable=self.Str_Test_Case_Path)
-		self.Entry_New_File_Path.grid(row=Row, column=3, columnspan=7, padx=4, pady=5, sticky=E)
+		self.Entry_New_File_Path = Entry(Tab,width = 80, state="readonly", textvariable=self.Str_Test_Case_Path)
+		self.Entry_New_File_Path.grid(row=Row, column=3, columnspan=7, padx=4, pady=5, sticky=W+E)
 		Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['Browse'], command= self.Btn_Browse_Test_Case_File).grid(row=Row, column=10, padx=0, pady=0, sticky=W)
 		#Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['SelectFontColor'], command= self.Btn_Select_Font_Colour).grid(row=Row, column=9, columnspan=2,padx=5, pady=5, sticky=W)
 		
 	
 		Row += 1
-		Label(Tab, text= 'Execute List').grid(row=Row, column=1, padx=5, pady=5, sticky=W)
+		Label(Tab, text= 'Execute List').grid(row=Row, column=1, columnspan=2, padx=5, pady=5, sticky=W)
 		self.ExecuteList = AutocompleteCombobox(Tab)
 
 		#self.TestProject = AutocompleteCombobox(Tab)
 		self.ExecuteList.set_completion_list([])
-		self.ExecuteList.Set_Entry_Width(30)
+		self.ExecuteList.Set_Entry_Width(20)
 		self.ExecuteList.grid(row=Row, column=3, padx=5, pady=5, sticky=W)
 
+		Label(Tab, text=self.LanguagePack.Label['Serial']).grid(row=Row, column=7, padx=5, pady=5, sticky=W)			
+		self.TextSerial = AutocompleteCombobox(Tab)
+		self.TextSerial.Set_Entry_Width(20)
+		
+		self.TextSerial.grid(row=Row, column=8, columnspan=2,padx=5, pady=5, sticky=W+E)
+		self.TextSerial.set_completion_list([])
+		Button(Tab, width = self.Button_Width_Half, text=  "Get Device", command= self.Get_Serial).grid(row=Row, column=10,padx=0, pady=0, sticky=W)
+		
 		'''
 		Row += 1
 		Label(Tab, text=self.LanguagePack.Label['TestFeature']).grid(row=Row, column=1, padx=5, pady=5, sticky=W)
@@ -342,35 +259,98 @@ class Automation_Execuser(Frame):
 		self.TestFeature.grid(row=Row, column=3, padx=5, pady=5, sticky=W)
 		'''
 		
-		Button(Tab, width = self.Button_Width_Half, text=  'Get Test info', command= self.Btn_Generate_TestCase).grid(row=Row, column=10,padx=0, pady=0, sticky=W)
+		#Button(Tab, width = self.Button_Width_Half, text=  'Get Test info', command= self.Btn_Generate_TestCase).grid(row=Row, column=10,padx=0, pady=0, sticky=W)
 
 		Row += 1
-		Label(Tab, text=self.LanguagePack.Label['Serial']).grid(row=Row, column=1, padx=5, pady=5, sticky=W)
-		
-		'''
-		self.TextSerial = Text(Tab, width=40, height=1, undo=True, wrap=WORD)
-		self.TextSerial.insert("end", "RF8N12EQJBK")
-		self.TextSerial.grid(row=Row, column=2, columnspan=4, padx=5, pady=5, sticky=W)
-		'''
-		
-		self.TextSerial = AutocompleteCombobox(Tab)
-		self.TextSerial.Set_Entry_Width(30)
-		
-		self.TextSerial.grid(row=Row, column=3, columnspan=4, padx=5, pady=5, sticky=W)
-		self.TextSerial.set_completion_list([])
+		Label(Tab, text= self.LanguagePack.Label['WorkingLang']).grid(row=Row, column=1, columnspan=2, padx=5, pady=5, sticky=W)
+		self.option_working_language = AutocompleteCombobox(Tab)
+		self.option_working_language.Set_Entry_Width(20)
+		self.option_working_language.grid(row=Row, column=3, padx=5, pady=5, sticky=W)
 
-		Button(Tab, width = self.Button_Width_Half, text=  "Get Device", command= self.Get_Serial).grid(row=Row, column=7,padx=0, pady=0, sticky=W)
-		Button(Tab, width = self.Button_Width_Half, text=  "Clear Log", command= self.ClearLog).grid(row=Row, column=8,padx=0, pady=0, sticky=W)
-		Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['Stop'], command= self.Stop).grid(row=Row, column=9,padx=0, pady=0, sticky=W)	
+		Label(Tab, text= "Device IP").grid(row=Row, column=7, padx=5, pady=5, sticky=W)	
+		self.Device_IP = Text(Tab, width=30, height=1, undo=True, wrap=WORD)
+		self.Device_IP.grid(row=Row, column=8, columnspan=2, padx=5, pady=5, sticky=E)
+		self.Device_IP.insert("end", "0.0.0.0")
+		Button(Tab, width = self.Button_Width_Half, text=  "Wireless Connect", command= self.Connect_Device).grid(row=Row, column=10, padx=0, pady=0, sticky=W)
+
+		Row+=1
+		Treeview_Row = 20
+		self.Generate_Treeview_Advanced_UI(Tab, Row, Treeview_Row)
+
+		Row+=1
+		Button(Tab, width = self.Button_Width_Half, text=  'Add above', command= self.insert_treeview_above).grid(row=Row, column=10,padx=0, pady=0, sticky=W)
+
+		Row+=1
+		Button(Tab, width = self.Button_Width_Half, text=  "Add", command= self.add_treeview_row).grid(row=Row, column=10,padx=0, pady=0, sticky=W)
+
+		Row+=1
+		Button(Tab, width = self.Button_Width_Half, text=  "Add below", command= self.insert_treeview_below).grid(row=Row, column=10,padx=0, pady=0, sticky=W)
+
+		Row+=1
+		Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['Stop'], command= self.Stop).grid(row=Row, column=10,padx=0, pady=0, sticky=W)	
+		Row+=1
 		self.Btn_Execute = Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['Execute'], command= self.Btn_Execute_Script)
 		self.Btn_Execute.grid(row=Row, column=10,padx=0, pady=0, sticky=W)
 
-		Row += 1
-		self.Debugger = scrolledtext.ScrolledText(Tab, width=125, height=15, undo=True, wrap=WORD, )
-		self.Debugger.grid(row=Row, column=1, columnspan=10, padx=5, pady=5, sticky=W+E+N+S)
+
+		Row += Treeview_Row
+		self.Debugger = scrolledtext.ScrolledText(Tab, width=100, height=10, undo=True, wrap=WORD, )
+		self.Debugger.grid(row=Row, column=1, columnspan=9, rowspan=10, padx=5, pady=5, sticky=W+E+N+S)
+		Button(Tab, width = self.Button_Width_Half, text=  "Clear Log", command= self.ClearLog).grid(row=Row, column=10,padx=0, pady=0, sticky=W)
+
 		#ScrollBar = Scrollbar(Tab, bg="green")
 		#ScrollBar.pack( side = RIGHT, fill = Y )
 
+	def Generate_Treeview_Advanced_UI(self, Tab, start_row, row_span):
+		TreeView_Row = start_row
+		TreeView_Size = row_span
+		Treeview_Col = 9
+		self.Treeview = Treeview(Tab)
+		self.Focused_Item = None
+		self.Treeview.grid(row=TreeView_Row, column=1, columnspan=Treeview_Col, rowspan=20, padx=5, pady=5, sticky = W+E)
+		verscrlbar = Scrollbar(Tab, orient ="vertical", command = self.Treeview.yview)
+		self.Treeview.configure( yscrollcommand=verscrlbar.set)
+	
+		self.Treeview.Scrollable = True
+		self.Treeview['columns'] = ('Type', 'Action', 'Arg1', 'Arg2', 'Arg3', 'Arg4', 'Arg5', 'Arg6')
+
+		self.Treeview.column('#0', width=0, stretch=NO)
+		self.Treeview.heading('#0', text='', anchor=CENTER)
+
+		for column in self.Treeview['columns']:
+			self.Treeview.column(column, anchor=CENTER, width=100)
+			self.Treeview.heading(column, text=column, anchor=CENTER)
+
+		verscrlbar.grid(row=TreeView_Row, column=Treeview_Col, rowspan=TreeView_Size, padx=5, pady=5,  sticky = N+S+E)
+		Tab.grid_columnconfigure(TreeView_Size, weight=0, pad=5)
+		styles = Style()
+		styles.configure('Treeview',rowheight=row_span)
+
+		self.Treeview.bind("<Delete>", self.delete_treeview_line)	
+		self.Treeview.bind("<Double-1>", self.Treeview_OCR_Select_Row)
+
+	def Generate_OCR_Setting_UI(self, Tab):
+		''''
+		Create Setting Tab
+		'''
+		Row = 1
+		Label(Tab, text= self.LanguagePack.Label['TesseractPath']).grid(row=Row, column=1, padx=5, pady=5, sticky=W)
+		self.Text_TesseractPath = Entry(Tab,width = 100, state="readonly", textvariable=self.TesseractPath)
+		self.Text_TesseractPath.grid(row=Row, column=3, columnspan=5, padx=5, pady=5, sticky=E+W)
+		Button(Tab, width = self.Button_Width_Full, text=  self.LanguagePack.Button['Browse'], command= self.Btn_Select_Tesseract_Path).grid(row=Row, column=9, columnspan=2, padx=5, pady=5, sticky=E)
+		
+		Row += 1
+		Label(Tab, text= self.LanguagePack.Label['TesseractDataPath']).grid(row=Row, column=1, padx=5, pady=5, sticky=W)
+		self.Text_TesseractDataPath = Entry(Tab,width = 100, state="readonly", textvariable=self.TesseractDataPath)
+		self.Text_TesseractDataPath.grid(row=Row, column=3, columnspan=5, padx=5, pady=5, sticky=E+W)
+		Button(Tab, width = self.Button_Width_Full, text=  self.LanguagePack.Button['Browse'], command= self.Btn_Select_Tesseract_Data_Path).grid(row=Row, column=9, columnspan=2, padx=5, pady=5, sticky=E)
+		
+		Row += 1
+		Label(Tab, text= self.LanguagePack.Label['DBPath']).grid(row=Row, column=1, padx=5, pady=5, sticky=W)
+		self.Text_DB_Path = Entry(Tab,width = 100, state="readonly", textvariable=self.DBPath)
+		self.Text_DB_Path.grid(row=Row, column=3, columnspan=5, padx=5, pady=5, sticky=E+W)
+		Button(Tab, width = self.Button_Width_Full, text=  self.LanguagePack.Button['Browse'], command= self.Btn_Browse_DB_File).grid(row=Row, column=9, columnspan=2, padx=5, pady=5, sticky=E)
+		
 	def Generate_Debugger_UI(self,Tab):
 		Row = 1
 		Button(Tab, width = self.Button_Width_Half, text=  "TAB", command= self.Btn_Send_Tab).grid(row=Row, column=1,padx=5, pady=5, sticky=W)
@@ -383,12 +363,322 @@ class Automation_Execuser(Frame):
 		Row += 1
 		self.Str_Template_Path = StringVar()
 		Label(Tab, text= 'Template path').grid(row=Row, column=1, padx=5, pady=5, sticky= W)
-		self.Entry_Old_File_Path = Entry(Tab,width = 90, state="readonly", textvariable=self.Str_Template_Path)
-		self.Entry_Old_File_Path.grid(row=Row, column=3, columnspan=5, padx=5, pady=5, sticky=W)
+		self.Entry_Old_File_Path = Entry(Tab,width = 80, state="readonly", textvariable=self.Str_Template_Path)
+		self.Entry_Old_File_Path.grid(row=Row, column=2, columnspan=5, padx=5, pady=5, sticky=W)
 		Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['Browse'], command= self.Btn_Browse_Template_File).grid(row=Row, column=8, padx=5, pady=5, sticky=W)
 		Button(Tab, width = self.Button_Width_Half, text= 'Tap', command= self.Btn_Tap_Template).grid(row=Row, column=9, columnspan=2,padx=5, pady=5, sticky=W)
 		
+###########################################################################################
+# OCR Setting
+###########################################################################################
 
+	def Btn_Select_Tesseract_Path(self):
+		filename = filedialog.askopenfilename(title =  self.LanguagePack.ToolTips['SelectDB'],filetypes = (("Executable files","*.exe" ), ), )	
+		if os.path.isfile(filename):
+			_tess_path = self.CorrectPath(filename)
+			self.AppConfig.Save_Config(self.AppConfig.Auto_Tool_Config_Path, 'AUTO_TOOL', 'tess_path', _tess_path, True)
+			pytesseract.pytesseract.tesseract_cmd = _tess_path
+			self.TesseractPath.set(_tess_path)
+		else:
+			self.Write_Debug(self.LanguagePack.ToolTips['TessNotSelect'])
+
+	def Btn_Select_Tesseract_Data_Path(self):
+		folder_name = filedialog.askdirectory(title =  self.LanguagePack.ToolTips['SelectSource'],)	
+		if os.path.isdir(folder_name):
+			folder_name = self.CorrectPath(folder_name)
+			self.TesseractDataPath.set(folder_name)
+
+			self.AppConfig.Save_Config(self.AppConfig.Auto_Tool_Config_Path, 'AUTO_TOOL', 'tess_data', folder_name, True)
+
+			self.Write_Debug(self.LanguagePack.ToolTips['DataSelected'] + ": " + folder_name)
+		else:
+			self.Write_Debug(self.LanguagePack.ToolTips['SourceDocumentEmpty'])
+
+	def Btn_Browse_DB_File(self):
+			
+		filename = filedialog.askopenfilename(title =  self.LanguagePack.ToolTips['SelectSource'],filetypes = (("Workbook files", "*.xlsx *.xlsm"), ), multiple = False)	
+		if filename != "":
+			self.DB_Path = self.CorrectPath(filename)
+			self.Str_DB_Path.set(self.DB_Path)
+			
+			self.AppConfig.Save_Config(self.AppConfig.Auto_Tool_Config_Path, 'AUTO_TOOL', 'db_path', self.DB_Path, True)
+			self.Write_Debug(self.LanguagePack.ToolTips['DataSelected'] + ": " + self.DB_Path)
+	
+		else:
+			self.Write_Debug(self.LanguagePack.ToolTips['SourceDocumentEmpty'])
+		return
+
+
+	def OCR_Setting_Set_Scan_Type(self, scan_type):		
+		self.ScanType.set(scan_type)
+		self.AppConfig.Save_Config(self.AppConfig.Auto_Tool_Config_Path, 'AUTO_TOOL', 'scan_type', scan_type)
+		self.Write_Debug(self.LanguagePack.ToolTips['ScanTypeUpdate'] + str(scan_type) + '.')
+		if scan_type == 'DB Create':
+			self.Write_Debug(self.LanguagePack.ToolTips['DBCreate'])
+		elif scan_type == 'Text only':
+			self.Write_Debug(self.LanguagePack.ToolTips['TextScan'])
+		elif scan_type == 'Image only':
+			self.Write_Debug(self.LanguagePack.ToolTips['ImageScan'])
+		elif scan_type == 'Image and Text':
+			self.Write_Debug(self.LanguagePack.ToolTips['AdvancedScan'])
+	
+
+
+
+	def OCR_Setting_Set_Browse_Type(self):
+		_browse_type = self.Browse_Type.get()
+		if _browse_type == 1:
+			_status = 'folder'
+		else:
+			_status = 'file'
+		
+		self.AppConfig.Save_Config(self.AppConfig.Auto_Tool_Config_Path, 'OCR_TOOL', 'browsetype', _browse_type)
+
+		self.Write_Debug(self.LanguagePack.ToolTips['BrowseTypeUpdate'] + str(_status))
+
+	def OCR_Setting_Set_Working_Resolution(self):
+		_resolution_index = self.Resolution.get()
+		if _resolution_index == 1:
+			self.WorkingResolution = 720
+		else:
+			self.WorkingResolution = 1080
+		
+		self.AppConfig.Save_Config(self.AppConfig.Auto_Tool_Config_Path, 'OCR_TOOL', 'resolution', _resolution_index)
+
+		self.Write_Debug(self.LanguagePack.ToolTips['SetResolution'] + str(self.WorkingResolution) + 'p')
+
+	def OCR_Setting_Set_Working_Language(self, select_value):
+		
+		self.AppConfig.Save_Config(self.AppConfig.Auto_Tool_Config_Path, 'OCR_TOOL', 'scan_lang', select_value)
+		
+		self.Write_Debug(self.LanguagePack.ToolTips['SetScanLanguage'] + str(select_value))
+	
+	
+
+###########################################################################################
+# General functions
+###########################################################################################
+
+	def CorrectPath(self, path):
+		if sys.platform.startswith('win'):
+			return str(path).replace('/', '\\')
+		else:
+			return str(path).replace('\\', '//')
+	
+	def CorrectExt(self, path, ext):
+		if path != None and ext != None:
+			Outputdir = os.path.dirname(path)
+			baseName = os.path.basename(path)
+			sourcename = os.path.splitext(baseName)[0]
+			newPath = self.CorrectPath(Outputdir + '/'+ sourcename + '.' + ext)
+			return newPath
+
+	def Write_Debug(self, text):
+		'''
+		Function write the text to debugger box and move to the end of the box
+		'''
+		self.Debugger.insert("end", "\n")
+		self.Debugger.insert("end", str(text))
+
+		self.Debugger.yview(END)		
+
+	def entry_next(self, event):
+		event.widget.tk_focusNext().focus()
+		return("break")
+
+###########################################################################################
+# Treeview FUNCTION
+###########################################################################################
+
+	def delete_treeview_line(self, event):
+		'''
+		Function activate when select an entry from a Treeview and press Delete btn
+		'''
+		selected = self.Treeview.selection()
+		to_remove = []
+		for child_obj in selected:
+			child = self.Treeview.item(child_obj)
+			tm_index = child['values'][0]
+			to_remove.append(tm_index)
+			self.Treeview.delete(child_obj)
+
+	# Obsoleted.
+	def double_right_click_treeview(self, event):
+		'''
+		Function activate when double click an entry from Treeview
+		'''
+		focused = self.Treeview.focus()
+		child = self.Treeview.item(focused)
+		
+		self.Debugger.insert("end", "\n")
+		self.Debugger.insert("end", 'Korean: ' + str(child["text"]))
+		self.Debugger.insert("end", "\n")
+		self.Debugger.insert("end", 'English: ' + str(child["values"][0]))
+		self.Debugger.yview(END)
+
+
+	# Nam will check
+	def load_tm_list(self):
+		"""
+		When clicking the [Load] button in TM Manager tab
+		Display the pair languages in the text box.
+		"""
+		self.remove_treeview()
+		
+		_area_list = []
+
+		for location in _area_list:	
+			try:
+				self.Treeview.insert('', 'end', text= '', values=( str(location['index']), str(location['x']), str(location['y']), str(location['h']), str(location['w'])))
+			except:
+				pass
+
+	def add_treeview_row(self):
+		'''
+		Add a row to the current Treeview
+		'''
+		self.Treeview.insert('', 'end', text= '', values=(1,1,1,1,1,1,1,1))
+
+	def insert_treeview_above(self):
+		'''
+		Add a row above the current Treeview
+		'''
+		index = self.Treeview.index(self.Treeview.focus())
+		self.Treeview.insert('', index, text= '', values=(2,2,2,2,2,2,2,2,2))
+
+	def insert_treeview_below(self):
+		'''
+		Add a row below the current Treeview
+		'''
+		index = self.Treeview.index(self.Treeview.focus())
+		self.Treeview.insert('', index+1, text= '', values=(3,3,3,3,3,3,3,3))
+		
+
+	def remove_treeview(self):
+		for i in self.Treeview.get_children():
+			self.Treeview.delete(i)
+
+	def Btn_OCR_Select_Area(self):
+		
+		if self.OCR_File_Path != None:
+			_index = random.randint(0, len(self.OCR_File_Path)-1)
+			if os.path.isfile(self.OCR_File_Path[_index]):
+				im = cv2.imread(self.OCR_File_Path[_index])
+				(_h, _w) = im.shape[:2]
+				ratio = 720 / _h
+				if ratio != 1:
+					width = int(im.shape[1] * ratio)
+					height = int(im.shape[0] * ratio)
+					dim = (width, height)
+					im = cv2.resize(im, dim, interpolation = cv2.INTER_AREA)
+
+				for row in self.Treeview.get_children():
+					child = self.Treeview.item(row)
+					im = cv2.rectangle(im, (child["values"][0], child["values"][1]), (child["values"][0] + child["values"][2], child["values"][1] + child["values"][3]), (255,0,0), 2)
+
+				location = cv2.selectROI("Sekect scan area", im, showCrosshair=False,fromCenter=False)
+				cv2.destroyAllWindows() 
+				self.Treeview.insert('', 'end', text= '', values=(str(location[0]), str(location[1]), str(location[2]), str(location[3])))
+			else:
+				self.Write_Debug(self.LanguagePack.ToolTips['SourceDocumentEmpty'])		
+		else:
+			self.Write_Debug(self.LanguagePack.ToolTips['SourceDocumentEmpty'])	
+		
+	def Btn_OCR_Select_Area_Advanced(self):
+		_scan_type = self.ScanType.get()
+
+		if self.OCR_File_Path != None:
+			_index = random.randint(0, len(self.OCR_File_Path)-1)
+			if os.path.isfile(self.OCR_File_Path[_index]):
+				im = cv2.imread(self.OCR_File_Path[_index])
+				(_h, _w) = im.shape[:2]
+				ratio = 720 / _h
+				if ratio != 1:
+					width = int(im.shape[1] * ratio)
+					height = int(im.shape[0] * ratio)
+					dim = (width, height)
+					im = cv2.resize(im, dim, interpolation = cv2.INTER_AREA)
+
+				for row in self.Treeview.get_children():
+					child = self.Treeview.item(row)
+					if _scan_type in ['Image and Text', 'DB Create', 'Text only']:
+						im = cv2.rectangle(im, (child["values"][0], child["values"][1]), (child["values"][0] + child["values"][2], child["values"][1] + child["values"][3]), (255,0,0), 2)
+					if _scan_type in ['Image and Text', 'DB Create', 'Image only']:
+						im = cv2.rectangle(im, (child["values"][4], child["values"][5]), (child["values"][4] + child["values"][6], child["values"][5] + child["values"][7]), (255,255,0), 2)
+				location = [0,0,0,0]
+				location2 = [0,0,0,0]
+				if _scan_type in ['Image and Text', 'DB Create', 'Text only']:
+					location = cv2.selectROI("Select TEXT area", im, showCrosshair=False,fromCenter=False)
+					im = cv2.rectangle(im, (location[0], location[1]), (location[0] + location[2], location[1] + location[3]), (255,0,0), 2)
+					cv2.destroyAllWindows() 
+				if _scan_type in ['Image and Text', 'DB Create', 'Image only']:
+					location2 = cv2.selectROI("Select COMPONENT area", im, showCrosshair=False,fromCenter=False)
+					cv2.destroyAllWindows() 
+				
+				self.Treeview.insert('', 'end', text= '', values=(str(location[0]), str(location[1]), str(location[2]), str(location[3]), str(location2[0]), str(location2[1]), str(location2[2]), str(location2[3]) ))
+				
+			else:
+				self.Write_Debug(self.LanguagePack.ToolTips['SourceDocumentEmpty'])		
+		else:
+			self.Write_Debug(self.LanguagePack.ToolTips['SourceDocumentEmpty'])				
+
+	def Btn_OCR_Input_Text_Area(self):
+
+		self.Focused_Item = self.Treeview.focus()
+		child = self.Treeview.item(self.Focused_Item)
+		
+		
+
+		_x = self.Str_CenterX.get("1.0", END).replace('\n', '')
+		if _x == '': _x = 0
+		_y = self.Str_CenterY.get("1.0", END).replace('\n', '')
+		if _y == '': _y = 0
+		_w = self.Str_Weight.get("1.0", END).replace('\n', '')
+		if _w == '': _w = 0
+		_h = self.Str_Height.get("1.0", END).replace('\n', '')
+		if _h == '': _h = 0
+		
+		if self.Region_Type.get() == 1:
+			self.Treeview.insert('', 'end', text= '', values=(str(int(_x)), str(int(_y)), str(int(_w)), str(int(_h)), child["values"][4], child["values"][5], child["values"][6], child["values"][7]))
+		else:
+			self.Treeview.insert('', 'end', text= '', values=(child["values"][0], child["values"][1], child["values"][2], child["values"][3], str(int(_x)), str(int(_y)), str(int(_w)), str(int(_h))))
+
+		#self.Update_Treeview_Advanced_UI()
+
+	def Treeview_OCR_Select_Row(self, event):
+		'''
+		Function activate when double click an entry from Treeview
+		'''
+		self.Focused_Item = self.Treeview.focus()
+		child = self.Treeview.item(self.Focused_Item)
+		index = self.Treeview.index(self.Focused_Item)
+		print('index number:', index)
+		
+
+	def Btn_OCR_Update_Area(self):
+
+		if self.Focused_Item != None:
+			child = self.Treeview.item(self.Focused_Item)
+			_x = self.Str_CenterX.get("1.0", END).replace('\n', '')
+			if _x == '': _x = 0
+			_y = self.Str_CenterY.get("1.0", END).replace('\n', '')
+			if _y == '': _y = 0
+			_w = self.Str_Weight.get("1.0", END).replace('\n', '')
+			if _w == '': _w = 0
+			_h = self.Str_Height.get("1.0", END).replace('\n', '')
+			if _h == '': _h = 0
+			
+			if self.Region_Type.get() == 1:
+				self.Treeview.item(self.Focused_Item, text="", values=(str(int(_x)), str(int(_y)), str(int(_w)), str(int(_h)), child["values"][4], child["values"][5], child["values"][6], child["values"][7]))
+			else:
+				self.Treeview.item(self.Focused_Item, text="", values=(child["values"][0], child["values"][1], child["values"][2], child["values"][3], str(int(_x)), str(int(_y)), str(int(_w)), str(int(_h))))
+
+
+			#self.Treeview.item(self.Focused_Item, text="", values=(child["values"]))
+			self.Focused_Item = None
+			
+
+	# Background function
 	def Get_Serial(self):
 		try:
 			client = AdbClient(host="127.0.0.1", port=5037)
@@ -451,6 +741,24 @@ class Automation_Execuser(Frame):
 
 
 	# Other function
+	def Btn_OCR_Update_Working_Language(self):
+		_data_ = str(self.TesseractDataPath.get())
+		_exe_ = str(self.TesseractPath.get())
+		_tessdata_dir_config = '--tessdata-dir ' + "\"" + _data_ + "\""
+		pytesseract.pytesseract.tesseract_cmd = _exe_
+		#self.language_list = pytesseract.get_languages(config=_tessdata_dir_config)
+		try:
+			self.language_list = pytesseract.get_languages(config=_tessdata_dir_config)
+			self.Write_Debug('Supported language list has been updated!')
+
+		except Exception as e:
+			self.Write_Debug('Tess path: ' + str(_exe_))
+			self.Write_Debug('Data path: ' + str(_data_))
+			self.Write_Debug('Error while updating supported language: ' + str(e))
+			self.language_list = ['']
+
+		self.option_working_language.set_completion_list(self.language_list)
+
 	def ClearLog(self):
 		self.Debugger.delete('1.0', END)
 		return
@@ -680,64 +988,57 @@ class Automation_Execuser(Frame):
 		self.quit()
 
 
-	def initGeneralSetting(self):
+	def init_App_Setting(self):
 		
-		config = configparser.ConfigParser()
-		if os.path.isfile(self.AppConfig):
-			config.read(self.AppConfig)
-			if config.has_section('DocumentToolkit'):
-				cfg = config['DocumentToolkit']
-			else:
-				config['DocumentToolkit'] = {}
-				cfg = config['DocumentToolkit']
+		self.Str_DB_Path = StringVar()
+		self.Str_Test_Case_Path = StringVar()
 
-			if config.has_option('DocumentToolkit', 'applang'):	
-				self.AppLanguage = config['DocumentToolkit']['applang']
-				print('Setting saved: ', self.AppLanguage)
-			else:
-				self.AppLanguage = 'en'
-				print('Setting not saved: ', self.AppLanguage)
+		self.TesseractPath = StringVar()
+		self.TesseractDataPath = StringVar()
+		self.WorkingLanguage = StringVar()
+		self.language_list = ['']
 
-			#if config.has_option('Translator', 'Subscription'):
-			#	self.Subscription = config['Translator']['Subscription']
-			#else:
-			#	self.Subscription = ''
+		self.DBPath = StringVar()
 
-		else:
+		self.Browse_Type = IntVar()
 
-			self.AppLanguage = 'en'
+		self.Resolution = IntVar()
+		self.CurrentDataSource = StringVar()
 
-	def init_UI_Configuration(self):
+		self.ScanType = StringVar()
+
+		self.Notice = StringVar()
+
+		self.AppConfig = ConfigLoader('AUTO_TOOL')
+
+		self.Configuration = self.AppConfig.Config
+		self.AppLanguage  = self.Configuration['AUTO_TOOL']['app_lang']
+
+		_tesseract_path = self.Configuration['AUTO_TOOL']['tess_path']
+		pytesseract.pytesseract.tesseract_cmd = str(_tesseract_path)
+		self.TesseractPath.set(_tesseract_path)
+
+		_tesseract_data_path = self.Configuration['AUTO_TOOL']['tess_data']
+		self.TesseractDataPath.set(_tesseract_data_path)
+
+		_db_path = self.Configuration['AUTO_TOOL']['db_path']
+		self.DBPath.set(_db_path)
+
+		_browse_type = self.Configuration['AUTO_TOOL']['browsetype']
+		self.Browse_Type.set(_browse_type)
+
+		_resolution = self.Configuration['AUTO_TOOL']['resolution']
+		self.Resolution.set(_resolution)
+
+	def init_UI_Data(self):
 		
-		config = configparser.ConfigParser()
-		if os.path.isfile(self.AppConfig):
-			config.read(self.AppConfig)
-			if config.has_section('Document_Utility'):
-				cfg = config['Document_Utility']
-			else:
-				config['Document_Utility'] = {}
-				cfg = config['Document_Utility']
+		self.Btn_OCR_Update_Working_Language()
+		_working_language = self.Configuration['AUTO_TOOL']['scan_lang']
+		self.option_working_language.set(_working_language)
 
-			if config.has_section('Comparision'):
-				cfg = config['Comparision']
-			else:
-				config.add_section('Comparision')
-				cfg = config['Comparision']
-
-			
-			'''
-			if config.has_option('DocumentTranslator', 'turbo'):
-				self.TurboTranslate.set(int(config['DocumentTranslator']['turbo']))
-			else:
-				self.TurboTranslate.set(0)
-			'''
-			
-		else:
-			self.Language = 'en'
-			
-
-		return	
-
+		_scan_type = self.Configuration['AUTO_TOOL']['scan_type']
+		self.ScanType.set(_scan_type)
+	
 	def Btn_Select_Font_Colour(self):
 		colorStr, self.Font_Color = colorchooser.askcolor(parent=self, title='Select Colour')
 		
@@ -751,17 +1052,7 @@ class Automation_Execuser(Frame):
 		#print(self.BackgroundColor)
 		return
 
-	def Btn_Browse_DB_File(self):
-			
-		filename = filedialog.askopenfilename(title =  self.LanguagePack.ToolTips['SelectSource'],filetypes = (("Workbook files", "*.xlsx *.xlsm"), ), multiple = False)	
-		if filename != "":
-			self.DB_Path = self.Function_Correct_Path(filename)
-			self.Str_DB_Path.set(self.DB_Path)
-			self.Notice.set(self.LanguagePack.ToolTips['SourceSelected'])
-		else:
-			self.Notice.set(self.LanguagePack.ToolTips['SourceDocumentEmpty'])
-		return
-
+	
 	def Btn_Browse_Template_File(self):
 			
 		filename = filedialog.askopenfilename(title =  self.LanguagePack.ToolTips['SelectSource'],filetypes = (("Template files", "*.jpg *.png"), ), multiple = False)	
