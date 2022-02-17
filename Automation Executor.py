@@ -772,26 +772,28 @@ class Automation_Execuser(Frame):
 			action_list.append(action)
 		
 		for value in action_list:
-			menu.add_command(label=value, command=lambda: lambda v=value: self.Update_Action_Arg(v))
+			menu.add_command(label=value, command=lambda _value=value: [lambda v=_value: self.current_action_name.set(_value), self.Update_Action_Arg(_value)])
 		if len(action_list)> 0:
 			self.current_action_name.set(action_list[0])
 		else:	
 			self.current_action_name.set("")	
 
 	def Update_Action_Arg(self, action_name=None):
-		print('action name:', action_name)
 		this_type = self.current_action_type.get()
-		self.current_action_name.set(action_name)
+		this_action = self.current_action_name.set(action_name)
 				
 		this_arg = self.action_dict[this_type][action_name]
 		print('this_arg', action_name, this_arg)
 
+	# This is temporary work, we need to add the value of the arg instead of the arg name.
+	# Will be updated later.
 	def generate_step_data(self):
 		this_type = self.current_action_type.get()
 		this_action = self.current_action_name.get()
-				
-		this_arg = [*self.action_dict[this_type][this_action]]
-		print('this_arg', this_action, this_arg)
+		if self.action_dict[this_type][this_action] != None:
+			this_arg = [*self.action_dict[this_type][this_action]]
+		else:
+			this_arg = []
 		values = [this_type] + [this_action] + this_arg
 
 		return values
