@@ -25,9 +25,10 @@ from tkinter import scrolledtext
 from openpyxl import load_workbook
 
 
-from general_function import *
+from libs.general_function import *
 # Function use for the action builder here
-from automation_driver import Automation as Tester
+from libs.automation_driver import Automation as Tester
+
 from ppadb.client import Client as AdbClient
 
 from libs.configmanager import ConfigLoader
@@ -105,6 +106,8 @@ class Automation_Execuser(Frame):
 		self.Debug = StringVar()
 		self.Progress = StringVar()
 	
+		self.AutoTester = Tester(self.Status_Queue)
+
 		#Generate UI
 		self.Generate_Menu_UI()
 		self.Generate_Tab_UI()
@@ -229,7 +232,7 @@ class Automation_Execuser(Frame):
 		Label(Tab, text=  self.LanguagePack.Label['TestCaseList']).grid(row=Row, column=1, columnspan=2, padx=5, pady=5, sticky= W)
 		self.Entry_New_File_Path = Entry(Tab,width = 80, state="readonly", textvariable=self.Str_Test_Case_Path)
 		self.Entry_New_File_Path.grid(row=Row, column=3, columnspan=7, padx=4, pady=5, sticky=W+E)
-		Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['Browse'], command= self.Btn_Browse_Test_Case_File).grid(row=Row, column=10, padx=0, pady=0, sticky=W)
+		Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['Browse'], command= self.Btn_Browse_Test_Case_File).grid(row=Row, column=10, padx=5, pady=0, sticky=W)
 		#Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['SelectFontColor'], command= self.Btn_Select_Font_Colour).grid(row=Row, column=9, columnspan=2,padx=5, pady=5, sticky=W)
 		
 	
@@ -248,7 +251,7 @@ class Automation_Execuser(Frame):
 		
 		self.TextSerial.grid(row=Row, column=8, columnspan=2,padx=5, pady=5, sticky=W+E)
 		self.TextSerial.set_completion_list([])
-		Button(Tab, width = self.Button_Width_Half, text=  "Get Device", command= self.Get_Serial).grid(row=Row, column=10,padx=0, pady=0, sticky=W)
+		Button(Tab, width = self.Button_Width_Half, text=  "Get Device", command= self.Get_Serial).grid(row=Row, column=10,padx=5, pady=0, sticky=W)
 		
 		'''
 		Row += 1
@@ -271,32 +274,57 @@ class Automation_Execuser(Frame):
 		self.Device_IP = Text(Tab, width=30, height=1, undo=True, wrap=WORD)
 		self.Device_IP.grid(row=Row, column=8, columnspan=2, padx=5, pady=5, sticky=E)
 		self.Device_IP.insert("end", "0.0.0.0")
-		Button(Tab, width = self.Button_Width_Half, text=  "Wireless Connect", command= self.Connect_Device).grid(row=Row, column=10, padx=0, pady=0, sticky=W)
+		Button(Tab, width = self.Button_Width_Half, text=  "Wireless Connect", command= self.Connect_Device).grid(row=Row, column=10, padx=5, pady=0, sticky=W)
 
 		Row+=1
 		Treeview_Row = 20
 		self.Generate_Treeview_Advanced_UI(Tab, Row, Treeview_Row)
 
 		Row+=1
-		Button(Tab, width = self.Button_Width_Half, text=  'Add above', command= self.insert_treeview_above).grid(row=Row, column=10,padx=0, pady=0, sticky=W)
+		Button(Tab, width = self.Button_Width_Half, text=  'Add above', command= self.insert_treeview_above).grid(row=Row, column=10,padx=5, pady=0, sticky=W)
 
 		Row+=1
-		Button(Tab, width = self.Button_Width_Half, text=  "Add", command= self.add_treeview_row).grid(row=Row, column=10,padx=0, pady=0, sticky=W)
+		Button(Tab, width = self.Button_Width_Half, text=  "Add", command= self.add_treeview_row).grid(row=Row, column=10,padx=5, pady=0, sticky=W)
 
 		Row+=1
-		Button(Tab, width = self.Button_Width_Half, text=  "Add below", command= self.insert_treeview_below).grid(row=Row, column=10,padx=0, pady=0, sticky=W)
-
+		Button(Tab, width = self.Button_Width_Half, text=  "Add below", command= self.insert_treeview_below).grid(row=Row, column=10,padx=5, pady=0, sticky=W)
 		Row+=1
-		Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['Stop'], command= self.Stop).grid(row=Row, column=10,padx=0, pady=0, sticky=W)	
+		Button(Tab, width = self.Button_Width_Half, text=  "Update List", command= self.Update_Action_List).grid(row=Row, column=10,padx=5, pady=0, sticky=W)	
+		Row+=1
+		Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['Stop'], command= self.Stop).grid(row=Row, column=10,padx=5, pady=0, sticky=W)	
 		Row+=1
 		self.Btn_Execute = Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['Execute'], command= self.Btn_Execute_Script)
-		self.Btn_Execute.grid(row=Row, column=10,padx=0, pady=0, sticky=W)
+		self.Btn_Execute.grid(row=Row, column=10,padx=5, pady=0, sticky=W)
 
 
 		Row += Treeview_Row
+
+		Label(Tab, text= "Action Type").grid(row=Row, column=1, columnspan=2, padx=5, pady=5, sticky=W)
+		action_type_list = ['Loop', 'Condition', 'Get_Result', 'Action', 'Update_Variable']
+		self.current_action_type.set(action_type_list[0])
+		# creating widget
+		self.action_type = OptionMenu(Tab, self.current_action_type,	*action_type_list, command=self.Update_Action_Name)
+		self.action_type.config(width=30)
+		#self.action_type.Set_Entry_Width(20)
+		#self.action_type.set_completion_list(['Loop', 'Condition', 'Get_Result', 'Action', 'Update_Variable',])
+		self.action_type.grid(row=Row, column=3, padx=5, pady=5, sticky=W)
+
+
+		Label(Tab, text= "Action Name").grid(row=Row, column=5, columnspan=2, padx=5, pady=5, sticky=W)
+		
+	
+		# creating widget
+		action_name_list = ['']
+		self.current_action_name.set(action_name_list[0])
+		self.action_name = OptionMenu(Tab, self.current_action_name, *action_name_list, command=self.Update_Action_Arg)
+		self.action_name.config(width=30)
+		#self.action_type.set_completion_list(['Loop', 'Condition', 'Get_Result', 'Action', 'Update_Variable',])
+		self.action_name.grid(row=Row, column=7, padx=5, pady=5, sticky=W)
+		Row+=1
+
 		self.Debugger = scrolledtext.ScrolledText(Tab, width=100, height=10, undo=True, wrap=WORD, )
 		self.Debugger.grid(row=Row, column=1, columnspan=9, rowspan=10, padx=5, pady=5, sticky=W+E+N+S)
-		Button(Tab, width = self.Button_Width_Half, text=  "Clear Log", command= self.ClearLog).grid(row=Row, column=10,padx=0, pady=0, sticky=W)
+		Button(Tab, width = self.Button_Width_Half, text=  "Clear Log", command= self.ClearLog).grid(row=Row, column=10,padx=5, pady=0, sticky=W)
 
 		#ScrollBar = Scrollbar(Tab, bg="green")
 		#ScrollBar.pack( side = RIGHT, fill = Y )
@@ -537,21 +565,25 @@ class Automation_Execuser(Frame):
 		'''
 		Add a row to the current Treeview
 		'''
-		self.Treeview.insert('', 'end', text= '', values=(1,1,1,1,1,1,1,1))
+		values = self.generate_step_data()
+		self.Treeview.insert('', 'end', text= '', values=values)
 
 	def insert_treeview_above(self):
 		'''
 		Add a row above the current Treeview
 		'''
+
 		index = self.Treeview.index(self.Treeview.focus())
-		self.Treeview.insert('', index, text= '', values=(2,2,2,2,2,2,2,2,2))
+		values = self.generate_step_data()
+		self.Treeview.insert('', index, text= '', values=values)
 
 	def insert_treeview_below(self):
 		'''
 		Add a row below the current Treeview
 		'''
 		index = self.Treeview.index(self.Treeview.focus())
-		self.Treeview.insert('', index+1, text= '', values=(3,3,3,3,3,3,3,3))
+		values = self.generate_step_data()
+		self.Treeview.insert('', index+1, text= '', values=values)
 		
 
 	def remove_treeview(self):
@@ -706,7 +738,7 @@ class Automation_Execuser(Frame):
 
 	def Btn_Send_4_Touch(self):
 		os.system( ADBPATH + ' forward tcp:9889 tcp:9889')
-		Four_Touch()
+		#Four_Touch()
 
 	def Btn_Send_Backkey(self):
 		os.popen( ADBPATH + ' shell input keyevent \'4\'')	
@@ -729,6 +761,41 @@ class Automation_Execuser(Frame):
 			self.ExecuteList.current(0)
 		except:
 			pass	
+
+	def Update_Action_Name(self, event=None):
+		menu = self.action_name["menu"]
+		menu.delete(0, 'end')
+		this_type = self.current_action_type.get()
+		temp_action_list = self.action_dict[this_type]
+		action_list = []
+		for action in temp_action_list:
+			action_list.append(action)
+		
+		for value in action_list:
+			menu.add_command(label=value, command=lambda: lambda v=value: self.Update_Action_Arg(v))
+		if len(action_list)> 0:
+			self.current_action_name.set(action_list[0])
+		else:	
+			self.current_action_name.set("")	
+
+	def Update_Action_Arg(self, action_name=None):
+		print('action name:', action_name)
+		this_type = self.current_action_type.get()
+		self.current_action_name.set(action_name)
+				
+		this_arg = self.action_dict[this_type][action_name]
+		print('this_arg', action_name, this_arg)
+
+	def generate_step_data(self):
+		this_type = self.current_action_type.get()
+		this_action = self.current_action_name.get()
+				
+		this_arg = [*self.action_dict[this_type][this_action]]
+		print('this_arg', this_action, this_arg)
+		values = [this_type] + [this_action] + this_arg
+
+		return values
+
 
 	# Other function
 	def Stop(self):
@@ -771,6 +838,12 @@ class Automation_Execuser(Frame):
 			self.Debugger.insert("end", "\n\r")
 			self.Debugger.insert("end", str(Key) + ':' + str(TestInfo[Key]))
 			self.Debugger.yview(END)	
+
+	def Update_Action_List(self):
+		print('Update action list to drop list')
+		for action in self.AutoTester.action_list:
+			print(action)
+		return
 
 
 
@@ -1009,6 +1082,10 @@ class Automation_Execuser(Frame):
 
 		self.Notice = StringVar()
 
+		self.current_action_type = StringVar()
+		self.current_action_name = StringVar()
+	
+
 		self.AppConfig = ConfigLoader('AUTO_TOOL')
 
 		self.Configuration = self.AppConfig.Config
@@ -1038,6 +1115,23 @@ class Automation_Execuser(Frame):
 
 		_scan_type = self.Configuration['AUTO_TOOL']['scan_type']
 		self.ScanType.set(_scan_type)
+
+		#self.action_name.set_completion_list([''])
+		action_type = ['Loop', 'Condition', 'Get_Result', 'Action', 'Update_Variable',]
+		self.action_dict = {}
+		for type in action_type:
+			self.action_dict[type] = {}
+
+		for action in self.AutoTester.action_list:
+			
+			if action['type'] in action_type:
+				this_action = {action['name']: action['arg']}
+				self.action_dict[action['type']][action['name']] = action['arg']
+		self.Update_Action_Name()	
+
+
+
+
 	
 	def Btn_Select_Font_Colour(self):
 		colorStr, self.Font_Color = colorchooser.askcolor(parent=self, title='Select Colour')
@@ -1080,16 +1174,24 @@ class Automation_Execuser(Frame):
 	
 		self.Btn_Generate_TestCase()
 
-		DB = self.Str_DB_Path.get()
+		DB_Path = self.Str_DB_Path.get()
 		Execute_Value = self.ExecuteList.get().replace('\n','')
-		Test_Case = self.Str_Test_Case_Path.get()
+		Test_Case_Path = self.Str_Test_Case_Path.get()
 		Serial = self.TextSerial.get().replace('\n','')
 		#MyDB = self.Function_Import_DB(self.DB_Path)
 		try:
 			self.Automation_Processor.terminate()
 		except Exception as e:
 			pass
-		self.Automation_Processor = Process(target=Function_Execute_Script, args=(self.Status_Queue, self.Result_Queue, Serial, DB, Test_Case, self.TestCase, Execute_Value,))
+
+		Dir, Name, Ext = Split_Path(Test_Case_Path)
+		Result_Folder_Path = Dir + '\\Result' + '_' + Name + '_' + Function_Get_TimeStamp()
+		Init_Folder(Result_Folder_Path)
+		
+		Result_File_Path = Result_Folder_Path + '\\' + Name + '_' + Function_Get_TimeStamp() + Ext
+
+
+		self.Automation_Processor = Process(target=Function_Execute_Script, args=(self.Status_Queue, self.Result_Queue, self.AutoTester, DB_Path, Test_Case_Path, Result_Folder_Path, self.TestCase, Execute_Value,))
 		#Status_Queue, Result_Queue, Serial_Nummber, DB_Path, Test_Case_Path, TestCaseObject = []
 		#self.Data_Compare_Process = Process(target=Old_Function_Compare_Excel, args=(self.Status_Queue, self.Process_Queue, Old_File, New_File, Output_Result, Sheet_Name, Index_Col, self.Background_Color, self.Font_Color,))
 		self.Automation_Processor.start()
@@ -1168,22 +1270,12 @@ class Automation_Execuser(Frame):
 ###########################################################################################
 
 def Function_Execute_Script(
-		Status_Queue, Result_Queue, Serial_Nummber, DB_Path, Test_Case_Path, TestCaseObject = [], Execute_Value = None, **kwargs
+		Status_Queue, Result_Queue, AutoTester, DB_Path, Test_Case_Path, Result_Folder_Path,TestCaseObject = [], Execute_Value = None, **kwargs
 ):
 	All = TestCaseObject	
 	Status_Queue.put("Importing test case config")
 
 	#os.system( ADBPATH + ' forward tcp:9889 tcp:9889')
-
-	Dir, Name, Ext = Split_Path(Test_Case_Path)
-	Result_Folder_Path = Dir + '\\Result' + '_' + Name + '_' + Function_Get_TimeStamp()
-	print('Result_Path', Result_Folder_Path)
-	Init_Folder(Result_Folder_Path)
-	
-	Result_File_Path = Result_Folder_Path + '\\' + Name + '_' + Function_Get_TimeStamp() + Ext
-	print('Result_File_Path', Result_File_Path)
-
-	AutoTester = Tester(Status_Queue, Serial_Nummber, DB_Path, Result_Folder_Path)
 
 	Connect_Status = AutoTester.Check_Connectivity()
 	if Connect_Status == False:

@@ -15,8 +15,6 @@ import imutils
 CWD = os.path.abspath(os.path.dirname(sys.argv[0]))
 import inspect
 
-from touch import TouchActionBuilder
-
 ################################################################################################################
 
 
@@ -339,19 +337,22 @@ def tap_object(Device, Location_Object):
 def read_img(img_path):
 	return cv2.imdecode(np.fromfile(img_path, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
 
+'''
 def Four_Touch():
 	points = [(500,500), (1000, 500), (1000, 1000), (500, 1000)]
 	th = TouchActionBuilder()
 	th.multifinger_ntap(points, 1, 250).execute_and_reset()
 	del th
 	return
-
 def Three_Touch():
 	points = [(500,500), (1000, 500), (1000, 1000)]
 	th = TouchActionBuilder()
 	th.multifinger_ntap(points, 1, 250).execute_and_reset()
 	del th
 	return
+
+
+'''
 
 def swipe(Device, x1, y1, x2, y2):
 	command = "input swipe " + str(x1) + " " + str(y1) + " " + str(x2) + " " + str(y2)
@@ -728,25 +729,4 @@ def Function_Execute_TestCase(TestSteps, Controller, TestCase_Path, Result_Path,
 		#eval("print(Controller.Result_Array)")
 
 	return True
-
-
-#path = 'C:\\Users\\evan\\OneDrive - NEXON COMPANY\\[Demostration] V4 Gacha test\\Test case.xlsx'
-#All = Function_Import_TestCase(path)
-#TestCase = All['Testcase']
-
-#Function_Execute_TestCase(TestCase)
-
-
-
-'''
-#Tap on Location_Object
-
-#print(Function_Import_TestCase(path))
-
-Result = {}
-Result['Step'] = 'Sample'
-Result['Result'] = 'Pass'
-Result['Note'] = 'It is a note'
-
-'''
 

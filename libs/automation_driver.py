@@ -7,18 +7,14 @@ import numpy as np
 import time
 #import imutils
 
-from general_function import *
+from libs.general_function import *
 
 #cwd = os.path.dirname(os.path.realpath(__file__))
 CWD = os.path.abspath(os.path.dirname(sys.argv[0]))
 
-Screenshot  = CWD + "\\"
+Default_Screenshot_Folder  = CWD + "\\" "Screenshot"
 
-if not os.path.isdir(Screenshot):
-	try:
-		os.mkdir(Screenshot)
-	except OSError:
-		print ("Creation of the directory %s failed" % Screenshot)
+Init_Folder(Default_Screenshot_Folder)
 
 from openpyxl import load_workbook
 
@@ -33,29 +29,82 @@ from openpyxl import load_workbook
 class Automation:
 	# Serial: Device's serial
 	# DB: Database's Path.
-	def __init__(self, Status_Queue, Serial, DB_Path=None, Result_Path = None):
+	def __init__(self, Status_Queue, Serial = None, DB_Path = None, Result_Folder_Path = None):
 		self.Debugger = Status_Queue
-		#self.Companion = Function_Import_DB(DB_Path, ['Companion'])
-		#self.Project = "V4"
+		
 		self.Client = AdbClient(host="127.0.0.1", port=8080)
-		self.Device = self.Client.device(Serial)
+
+		if Serial != None:	
+			if self.Client != None:	
+				self.Device = self.Client.device(Serial)
+			else:
+				self.Device = None
+		else:
+			self.Device = None
+
 		self.Gacha_Pool = []
 		self.Execution_List = []
 		self.Current_Value = None
+		
+		self.action_list = []
+		
 		self.Item_List = []
 		self.Result_Array = []
 		if DB_Path != None:
 			self.DB_Path = self.Get_Folder(DB_Path)
 			self.UI = Function_Import_DB(DB_Path, ['UI'])
-		if Result_Path != None:
-			self.Result_Path = self.Get_Folder(Result_Path)	
+		
+		self.Result_Path = Result_Folder_Path
+
+		self.Update_Action_List()
+
+	def append_action_list(self, type = None, name = None, argument = [], description = ''):
+	
+		_action = {}
+		_action['type'] = type
+		_action['name'] = name
+		_action['arg'] = argument
+		_action['description'] = description
+
+		self.action_list.append(_action)
+		return _action
+
+	def Update_Action_List(self):
+		self.append_action_list(type = 'Action', name = 'Tap_Item', argument = {'string_id': 'string', 'total_attemp': 'int'}, description= '')
+		self.append_action_list(type = 'Action', name = 'Tap_Template', argument = {'image_path': 'string', 'total_attemp': 'int'}, description= '')
+		self.append_action_list(type = 'Action', name = 'Relative_Tap', argument = {'string_id': 'string', 'Delta_X': 'int', 'Delta_Y': 'int'}, description= '')
+		self.append_action_list(type = 'Action', name = 'Send_Tab_Key', argument = None, description= '')
+		self.append_action_list(type = 'Get_Result', name = 'Count_Object', argument = {'string_id':'string'}, description= '')
+		self.append_action_list(type = 'Update_Variable', name = 'Update_Gacha_Pool', argument = {'db_path':'string', 'db_sheet_name': 'string', 'gacha_pool_sheet':'string'}, description= '')
+		self.append_action_list(type = 'Update_Variable', name = 'Update_Execution_List', argument = {'Execute_List':'string'}, description= '')
+		self.append_action_list(type = 'Update_Variable', name = 'Update_Execution_Value', argument = {'Execute_List':'string'}, description= '')
+		self.append_action_list(type = 'Get_Result', name = 'Analyse_Gacha_Acquired', argument = {'total_item_in_gacha': 'int'}, description= '')
+		self.append_action_list(type = 'Update_Variable', name = 'Analyse_Gacha_Result', argument = {'total_item_in_gacha': 'int'}, description= '')
+		self.append_action_list(type = 'Action', name = 'wait_for_item', argument = {'string_id':'string', 'match_rate': 'float', 'timeout': 'int'}, description= '')	
+		self.append_action_list(type = 'Action', name = 'Swipe_by_StringID', argument = {'string_id_A': 'string', 'string_id_B':'string'}	, description= '')
+		self.append_action_list(type = 'Action', name = 'Send_Enter_Key', argument = None, description= '')
+		self.append_action_list(type = 'Action', name = 'Input_Text', argument = {'input_text':'string'}, description= '')
+		self.append_action_list(type = 'Action', name = 'Input_Current_Value', argument = None, description= '')
+		self.append_action_list(type = 'Action', name = 'Tap_Current_Item', argument = None, description= '')
+		self.append_action_list(type = 'Action', name = 'Wait_For_Current_Item', argument = None, description= '')
+		self.append_action_list(type = 'Action', name = 'Get_Screenshot', argument = None, description= '')
+		self.append_action_list(type = 'Loop', name = 'List_Loop', argument = {'list_name': 'string'}, description= '')
+		self.append_action_list(type = 'Loop', name = 'Loop', argument = {'amount': 'int'}, description= '')
 
 
 	def Get_Folder(self, Path):
+
 		return os.path.dirname(Path)
 		 
-	def Add_DB_Path(self, Path):
-		return self.DB_Path + "//" + Path
+	def Update_Result_Path(self, Path):
+		self.Result_Path = Path
+
+	def Update_DB_Path(self, Path):
+		self.Result_Path = Path	
+
+	def Update_Serial_Number(self, Serial):
+		self.Device = self.Client.device(Serial)
+
 
 	def Check_Connectivity(self):
 		try:
@@ -111,6 +160,7 @@ class Automation:
 				tap_object(self.Device, result)
 				return self.Generate_Result(Status = True)
  
+		
 		return self.Generate_Result(Status = False)
 
 	def Tap_Template(self, image_path, total_attemp = 5):
@@ -132,7 +182,8 @@ class Automation:
 			if result:
 				tap_object(self.Device, result)
 				return self.Generate_Result(Status = True)
- 
+
+		
 		return self.Generate_Result(Status = False)
 
 	def Relative_Tap(self, StringID, Delta_X=0, Delta_Y=0):
@@ -152,44 +203,14 @@ class Automation:
 			ResultStatus = True
 		else:
 			ResultStatus = False
-
+		
 		return self.Generate_Result(Status = ResultStatus)	
 
-	def Four_Touch(self):
-		Four_Touch()
+	#def Four_Touch(self):
+	#	Four_Touch()
 
-	def Three_Touch(self):
-		Three_Touch()
-
-	def Nav_V4Shop(self):
-		action_result = self.Tap_Item('UI_V4Shop')
-
-		return action_result
-		
-
-	def Nav_Exit(self):
-		action_result = self.Tap_Item('UI_Exit')
-		return action_result
-
-
-	def Nav_BurgerMenu(self):
-		action_result = self.Tap_Item('UI_BurgerMenu')
-
-		return action_result
-
-	def Nav_Inventory(self):
-		action_result = self.Tap_Item('UI_Inventory')
-		
-		return action_result
-
-	def Nav_CompanionsShop(self):
-		action_result = self.Tap_Item('UI_CompanionsShop')
-
-		return action_result
-
-	def Tap_If_Exist(self):
-		return
-
+	#def Three_Touch(self):
+	#	Three_Touch()
 
 	def Count_Object(self, StringID):
 		Img_Screenshot = self.Device.screencap()
@@ -197,50 +218,18 @@ class Automation:
 		Img_Screenshot = cv2.imdecode(Img_Screenshot, cv2.IMREAD_COLOR)
 		Img_Template = self.UI[StringID]['Image']
 		ResultStatus, Img = Count_Object(Img_Screenshot, Img_Template)
+		
+		
+
 		return self.Generate_Result(Status = ResultStatus, Screenshot = Img)
 
-
-	def Swipe_Down_V4Shop(self):
-		StringID = 'UI_MountsShop'
-		Img_Screenshot = self.Device.screencap()
-		Img_Screenshot = np.asarray(Img_Screenshot)
-		Img_Screenshot = cv2.imdecode(Img_Screenshot, cv2.IMREAD_COLOR)
-
-		Img_Template = self.UI[StringID]['Image']
-		#Search_All_Object(Img_Screenshot, Img_Template)
-		#result = Search_Best_Match(Img_Screenshot, Img_Template)
-		result = Get_Item(Img_Screenshot, Img_Template)
-		if result:
-			swipe_up(self.Device, result, 500)
-			ResultStatus = True
-		else:
-			ResultStatus = False
-
-		return self.Generate_Result(Status = ResultStatus)
-
-	def Swipe_Up_V4Shop(self):
-		StringID = 'UI_MountsShop'
-		Img_Screenshot = self.Device.screencap()
-		Img_Screenshot = np.asarray(Img_Screenshot)
-		Img_Screenshot = cv2.imdecode(Img_Screenshot, cv2.IMREAD_COLOR)
-
-		Template_Path = self.UI[StringID]['Path']
-		Img_Template = read_img(Template_Path)
-		result = Get_Item(Img_Screenshot, Img_Template)
-		if result:
-			swipe_up(self.Device, result, -500)
-			ResultStatus = True
-		else:
-			ResultStatus = False
-
-		return self.Generate_Result(Status = ResultStatus)
-
-	def Update_Gacha_Pool(self, DB_Path, DB_Sheet, Pool):
-		self.Gacha_Pool = Function_Import_DB(DB_Path, [DB_Sheet], Pool)
+	def Update_Gacha_Pool(self, DB_Path, DB_Sheet, Gacha_Pool):
+		self.Gacha_Pool = Function_Import_DB(DB_Path, [DB_Sheet], Gacha_Pool)
+		
 		return self.Generate_Result(Status = True)
 
-	def Update_Execution_List(self, Data):
-		self.Execution_List = Data
+	def Update_Execution_List(self, Execute_List):
+		self.Execution_List = Execute_List
 		return self.Generate_Result(Status = True)
 
 	def Update_Execution_Value(self, Execute_Value):
@@ -281,6 +270,7 @@ class Automation:
 			cv2.imwrite(Name, Img_Screenshot) 
 		else:
 			Status_Result = True	
+		
 
 		return self.Generate_Result(Type = 'Result', Status = Status_Result, Screenshot = Img_Screenshot, Details = Gacha_Result)
 
@@ -358,45 +348,74 @@ class Automation:
 		Loc_B= Get_Item(Img_Screenshot, Img_Template_B)
 
 		result = swipe(self.Device, Loc_A, Loc_B)
-			
+
 		return self.Generate_Result(Status = result)
 
 	def Send_Enter_Key(self):
 		send_key(self.Device, '66')
 		ResultStatus = True
+
 		return self.Generate_Result(Status = ResultStatus)
 
 
 	def Send_Tab_Key(self):
 		send_key(self.Device, '61')
 		ResultStatus = True
+
+	
+
 		return self.Generate_Result(Status = ResultStatus)
 
 	def Send_BackKey_Key(self):
 		send_key(self.Device, '4')
 		ResultStatus = True
+
+		self.append_action_list(type = 'Action', name = 'Send_BackKey_Key', argument = [], description= '')
+
 		return self.Generate_Result(Status = ResultStatus)
 		
 
 	def Input_Text(self, Text):
 		send_text(self.Device, Text)
 		ResultStatus = True
+
+		
+
 		return self.Generate_Result(Status = ResultStatus)
 
 	def Input_Current_Value(self):
 		send_text(self.Device, self.Execution_Value)
 		ResultStatus = True
+
+	
+
 		return self.Generate_Result(Status = ResultStatus)
 
 	def Tap_Current_Item(self):
 		self.tap_item(self.Execution_Value)
+		ResultStatus = True
+
+		
+		
+		return self.Generate_Result(Status = ResultStatus)
 
 	def Wait_For_Current_Item(self):
 		self.wait_for_item(self.Execution_Value)	
+		ResultStatus = True
+
+		
+		return self.Generate_Result(Status = ResultStatus)
 	
 	def Get_Screenshot(self, Name = 'Screenshot_'):
 		Image = self.Device.screencap()
 		Img_Name = Correct_Path(Name + Function_Get_TimeStamp() + '.png', self.Result_Path)
-		with open(Img_Name, "wb") as fp:
-			fp.write(Image)
-		return	
+		ResultStatus = True
+		try:
+			with open(Img_Name, "wb") as fp:
+				fp.write(Image)
+		except:
+			ResultStatus = False
+		
+		return self.Generate_Result(Status = ResultStatus)
+
+
