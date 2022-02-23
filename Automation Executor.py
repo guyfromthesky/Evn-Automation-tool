@@ -302,7 +302,7 @@ class Automation_Execuser(Frame):
 
 		Row += Treeview_Row
 
-		Label(Tab, text= "Action Type", width= 15).grid(row=Row, column=1, columnspan=2, padx=5, pady=5, sticky=W)
+		Label(Tab, text= "Action Type", width= 20).grid(row=Row, column=1, columnspan=2, padx=5, pady=5, sticky=W)
 		action_type_list = ['', 'Loop', 'Condition', 'Get_Result', 'Action', 'Update_Variable']
 		action_type_list.sort()
 		self.current_action_type.set(action_type_list[0])
@@ -314,7 +314,7 @@ class Automation_Execuser(Frame):
 		self.action_type.grid(row=Row, column=3, padx=5, pady=5, sticky=W)
 
 
-		Label(Tab, text= "Action Name", width= 15).grid(row=Row, column=5, columnspan=2, padx=5, pady=5, sticky=W)
+		Label(Tab, text= "Action Name", width= 20).grid(row=Row, column=5, columnspan=2, padx=5, pady=5, sticky=W)
 		
 	
 		# creating widget
@@ -383,8 +383,8 @@ class Automation_Execuser(Frame):
 		
 		Row += 1
 		Label(Tab, text= self.LanguagePack.Label['DBPath']).grid(row=Row, column=1, padx=5, pady=5, sticky=W)
-		self.Text_DB_Path = Entry(Tab,width = 100, state="readonly", textvariable=self.DBPath)
-		self.Text_DB_Path.grid(row=Row, column=3, columnspan=5, padx=5, pady=5, sticky=E+W)
+		self.Entry_DB_Path = Entry(Tab,width = 100, state="readonly", textvariable=self.Text_DB_Path)
+		self.Entry_DB_Path.grid(row=Row, column=3, columnspan=5, padx=5, pady=5, sticky=E+W)
 		Button(Tab, width = self.Button_Width_Full, text=  self.LanguagePack.Button['Browse'], command= self.Btn_Browse_DB_File).grid(row=Row, column=9, columnspan=2, padx=5, pady=5, sticky=E)
 		
 	def Generate_Debugger_UI(self,Tab):
@@ -409,7 +409,7 @@ class Automation_Execuser(Frame):
 ###########################################################################################
 
 	def Btn_Select_Tesseract_Path(self):
-		filename = filedialog.askopenfilename(title =  self.LanguagePack.ToolTips['SelectDB'],filetypes = (("Executable files","*.exe" ), ), )	
+		filename = filedialog.askopenfilename(title =  'Please select Tesseract.exe file',filetypes = (("Executable files","*.exe" ), ), )	
 		if os.path.isfile(filename):
 			_tess_path = self.CorrectPath(filename)
 			self.AppConfig.Save_Config(self.AppConfig.Auto_Tool_Config_Path, 'AUTO_TOOL', 'tess_path', _tess_path, True)
@@ -419,14 +419,14 @@ class Automation_Execuser(Frame):
 			self.Write_Debug(self.LanguagePack.ToolTips['TessNotSelect'])
 
 	def Btn_Select_Tesseract_Data_Path(self):
-		folder_name = filedialog.askdirectory(title =  self.LanguagePack.ToolTips['SelectSource'],)	
+		folder_name = filedialog.askdirectory(title =  'Please select Tesseract data folder',)	
 		if os.path.isdir(folder_name):
 			folder_name = self.CorrectPath(folder_name)
 			self.TesseractDataPath.set(folder_name)
 
 			self.AppConfig.Save_Config(self.AppConfig.Auto_Tool_Config_Path, 'AUTO_TOOL', 'tess_data', folder_name, True)
 
-			self.Write_Debug(self.LanguagePack.ToolTips['DataSelected'] + ": " + folder_name)
+			self.Write_Debug('Tesseract data folder has been set to: ' + folder_name)
 		else:
 			self.Write_Debug(self.LanguagePack.ToolTips['SourceDocumentEmpty'])
 
@@ -1073,8 +1073,10 @@ class Automation_Execuser(Frame):
 		self.TesseractDataPath.set(_tesseract_data_path)
 
 		_db_path = self.Configuration['AUTO_TOOL']['db_path']
-		self.DBPath.set(_db_path)
+		self.Text_DB_Path.set(_db_path)
 		self.DB_Path = _db_path
+		
+		
 
 		_resolution = self.Configuration['AUTO_TOOL']['resolution']
 		self.Resolution.set(_resolution)

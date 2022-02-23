@@ -56,12 +56,14 @@ class Automation:
 		
 		self.Result_Path = Result_Folder_Path
 
-		self.Update_Action_List()
+		
 
 		self.tess_path = None
 		self.tess_data = None
 		self.tess_lang = None
 		self.OCR = False
+
+		self.Update_Action_List()
 
 	def append_action_list(self, type = None, name = None, argument = [], description = ''):
 	
