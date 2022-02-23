@@ -1,0 +1,5 @@
+Type,Action,Arg1,Arg2,Arg3,Arg4,Arg5,Arg6
+Action,Tap_Item,Fellow_Collection,"
+",,,,
+Action,Get_Screenshot,,,,,,
+Action,Input_Current_Value,,,,,,

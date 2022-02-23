@@ -52,11 +52,16 @@ class Automation:
 		self.Result_Array = []
 		if DB_Path != None:
 			self.DB_Path = self.Get_Folder(DB_Path)
-			self.UI = Function_Import_DB(DB_Path, ['UI'])
+			self.Function_Import_DB()
 		
 		self.Result_Path = Result_Folder_Path
 
 		self.Update_Action_List()
+
+		self.tess_path = None
+		self.tess_data = None
+		self.tess_lang = None
+		self.OCR = False
 
 	def append_action_list(self, type = None, name = None, argument = [], description = ''):
 	
@@ -69,28 +74,364 @@ class Automation:
 		self.action_list.append(_action)
 		return _action
 
+	def Function_Import_TestCase(self, TestCase_Path):
+
+		if TestCase_Path != None:
+			if (os.path.isfile(TestCase_Path)):
+				xlsx = load_workbook(TestCase_Path, data_only=True)
+				Testcase = {}
+
+				for sheet in xlsx:
+					
+					sheetname = sheet.title.lower()
+					if sheetname  == 'testcase':
+						FirstInfoRow = None
+						EndInfoRow = None
+
+						FirstTestCaseRow = None
+						EndTestCaseRow = None
+
+						ws = xlsx[sheet.title]
+
+						Testcase['Info'] = {}
+						Testcase['Testcase'] = []
+						database = None
+						ListCol = {}
+
+						Loop = False
+						LoopStep = []
+
+						#Get Col Label and Letter
+						for col in ws.iter_cols(min_row=1, max_col=1):
+							for cell in col:
+								Value = cell.value
+								if Value != None:
+									Value = Value.lower()
+									CurrentRow = cell.row
+									
+									if Value == 'info':
+										if FirstInfoRow == None:
+											FirstInfoRow = CurrentRow
+										if EndInfoRow == None or EndInfoRow < CurrentRow:
+											EndInfoRow = CurrentRow
+										if CurrentRow > FirstInfoRow:
+											Par = ws['B' + str(CurrentRow)].value
+											Val = ws['C' + str(CurrentRow)].value
+											Testcase['Info'][Par] = Val
+										
+
+									if Value == 'test case':
+										if FirstTestCaseRow == None:
+											FirstTestCaseRow = CurrentRow
+										if EndTestCaseRow == None or EndTestCaseRow < CurrentRow:
+											EndTestCaseRow = CurrentRow
+										
+										
+										if CurrentRow > FirstTestCaseRow:
+											Step = {}
+											Function = ws['C' + str(CurrentRow)].value	
+											Step['Name'] = Function
+											Step['Argument'] = []
+											lastChar = "D"
+											while True:		
+												try:
+													Val = ws[lastChar + str(CurrentRow)].value
+													if Val != None:
+														Step['Argument'].append(Val)
+														lastChar = chr(ord(lastChar) + 1)
+													else:
+														break
+												except:
+													break
+											
+											Type = ws['B' + str(CurrentRow)].value
+											#print('Type', Type)
+											if Type.find('Loop') > -1:
+												LoopStep.append(Step)
+												#print('Add loop step', Step)
+											else:
+
+												if len(LoopStep) > 0:
+													#LoopStep.append(Step)
+													LoopSteps = {}
+													LoopSteps['Name'] = 'Loop'
+													Type = ws['B' + str(CurrentRow-1)].value
+													Type = Type.replace('Loop(',"")
+													Type = Type.replace(')',"")
+
+													LoopSteps['Amount'] = int(Type)
+													LoopSteps['Step'] = LoopStep
+													
+													Testcase['Testcase'].append(LoopSteps)
+													Testcase['Testcase'].append(Step)
+													LoopStep = []
+													#print('Update loop step', LoopSteps)
+												else:
+													Testcase['Testcase'].append(Step)
+													#print('Add normal step: ', Step)
+
+											CurrentRow +=1
+											
+							if len(LoopStep) > 0:
+								LoopSteps = {}
+								LoopSteps['Name'] = 'Loop'
+								Type = ws['B' + str(CurrentRow-1)].value
+								Type = Type.replace('Loop(',"")
+								Type = Type.replace(')',"")
+
+								LoopSteps['Amount'] = int(Type)
+								LoopSteps['Step'] = LoopStep
+								
+								Testcase['Testcase'].append(LoopSteps)
+
+				if 'Type' not in Testcase['Info']:
+					Testcase['Info']['Type'] = 'General'
+				return Testcase
+			else:
+				return({})	
+		else:
+			return({})
+
+
+	def Function_Import_DB(self):
+		#self.StringID = []	
+		self.UI = {}
+		if self.DB_Path != None:
+			if (os.path.isfile(self.DB_Path)):
+				xlsx = load_workbook(self.DB_Path, data_only=True)
+				for sheet in xlsx:	
+					sheetname = sheet.title			
+					print('Adding DB from: ', sheet)
+					DB_Name = sheetname
+					Col_StringID = ""
+					Col_String_EN = ""
+					Col_String_KR = ""
+					Col_Path = ""
+
+					ws = xlsx[sheet.title]
+
+					database = None
+					ListCol = {}
+
+					#Get Col Label and Letter
+					for row in ws.iter_rows():
+						for cell in row:
+							if cell.value == "StringID":
+								Col = cell.column_letter
+								Row_ColID = cell.row
+								Col_StringID = Col
+								ListCol['StringID'] = Col_StringID
+
+							if Col_StringID != "":
+								database = ws
+								lastChar = Col_StringID
+								
+								while True:
+									lastChar = chr(ord(lastChar) + 1)
+									try:
+										ColLabel = database[lastChar + str(Row_ColID)].value
+									except:
+										break	
+									if ColLabel in ["",None] :
+										break
+									else:
+										ListCol[ColLabel] = lastChar
+
+								
+						if database!=  None:
+							break		
+					# Load data 			
+					if database != None:
+						for i in range(Row_ColID, database.max_row): 
+							StringID = database[Col_StringID + str(i+1)].value
+							#self.StringID.append(StringID)
+							MyEntry = {}
+							for Label in ListCol:
+								if Label == 'Path':
+									Path = database[ListCol[Label] + str(i+1)].value
+									try:
+										Path = Correct_Path(Path)
+									except:
+										Path = None	
+									if Path != None:
+										if os.path.isfile(Path):	
+											#MyEntry['Path'] = Path
+											#MyEntry['Image'] = read_img(Path)
+											MyEntry[Label] = database[ListCol[Label] + str(i+1)].value
+
+									
+								else:
+									MyEntry[Label] = database[ListCol[Label] + str(i+1)].value
+							if 'Path' in MyEntry:
+								self.UI[StringID] = MyEntry	
+
+	def Function_Import_Data(self, TestCase_Path, Data_ID):
+
+		Data_ID = Data_ID.lower()
+		if TestCase_Path != None:
+			if (os.path.isfile(TestCase_Path)):
+				xlsx = load_workbook(TestCase_Path, data_only=True)
+				#Entry = {}
+				Data = []
+				for sheet in xlsx:
+					
+					sheetname = sheet.title.lower()
+					print('sheetname:', sheetname)
+					if sheetname.find('data_')  > -1:
+						DataName = sheetname.replace('data_', '')
+						if DataName ==  Data_ID:
+							FirstDataRow = None
+							EndDataRow = None
+
+							ws = xlsx[sheet.title]
+							#Get Col Label and Letter
+							for col in ws.iter_cols(min_row=1, max_col=1):
+								for cell in col:
+									Value = cell.value
+									if Value != None:
+										Value = Value.lower()
+										print('Value:', Value)
+										CurrentRow = cell.row
+										
+										if Value == 'stringid':
+											FirstInfoRow = CurrentRow
+										else:
+											Data.append(Value)
+
+							return Data
+
+			else:
+				return([])		
+		else:
+			return([])	
+
+	def Function_Execute_TestCase( self,TestSteps, Controller, TestCase_Path, Result_Path, Test_Type, Status_Queue):
+		
+		preflix = 'Controller' + '.'	
+		ResultComment = []
+		Export_Result = []
+
+
+		for Step in TestSteps:
+			Result = None
+			Stepname = preflix + Step['Name']
+			if Step['Name'] != "Loop":
+				Arg = Step['Argument']
+				TempArg = []
+				for temp_arg in Arg:
+					TempArg.append('\"' + str(temp_arg) + '\"')
+
+				TempArg = str(','.join(TempArg))
+				if len(Arg) > 0:
+					toEval = Stepname + '(' + str(TempArg) + ')'
+				else:
+					toEval = Stepname + '()'	
+				Status_Queue.put(str("Execute function: " + Stepname))
+				Result = eval(toEval)
+				
+				if Result['Type'] == "Execute":
+					TextResult = 'Result' + str(Stepname) + ': ' + str(Result['Type'])
+					Step_Result = {}
+					Step_Result['Name'] = str(Step['Name'])
+					Step_Result['Status'] = Result['Status']
+					if 'Details' in Result:
+						Step_Result['Details'] = Result['Details'] 
+					Export_Result.append(Step_Result)
+					#TestResult = {}
+					#TestResult['Name'] = str(Step['Name'])
+					#ResultArray.append(TestResult)
+
+				elif Result['Type'] == 'Result':
+					TextResult = 'Result' + str(LStepname) + ': ' + str(Result['Type'])
+					TestResult = {}
+					TestResult['Name'] = str(Step['Name'])
+					TestResult['Detail'] = Result['Details']
+					Controller.Update_Result_Array(TestResult)
+
+				ResultComment.append(TextResult)
+
+				#Status_Queue.put(str(TextResult))
+
+			else:
+				Steps = Step['Step']
+				LoopAmount = Step['Amount']
+				for i in range(LoopAmount):
+					for LoopStep in Steps:
+						LStepname = preflix + LoopStep['Name']
+						#LArg = NewStep['Argument']
+						Arg = LoopStep['Argument']
+						TempArg = []
+						#for temp_arg in LArg:
+						for temp_arg in Arg:
+							TempArg.append('\"' + str(temp_arg) + '\"')
+						TempArg = str(','.join(TempArg))	
+						Status_Queue.put(str("Execute function: " + LStepname))
+						toEval = LStepname + '(' + TempArg + ')'
+						Result = eval(toEval)
+						if Result['Type'] == "Execute":
+							TextResult = 'Result ' + str(LStepname) + ': ' + str(Result['Status'])
+							Step_Result = {}
+							Step_Result['Name'] = str(LoopStep['Name'])
+							Step_Result['Status'] = Result['Status']
+							if 'Details' in Result:
+								Step_Result['Details'] = Result['Details'] 
+							Export_Result.append(Step_Result)
+
+						elif Result['Type'] == 'Result':
+							TextResult = 'Result ' + str(LStepname) + ': ' + str(Result['Status'])
+							TestResult = {}
+							TestResult['Name'] = str(LoopStep['Name'])
+							TestResult['Detail'] = Result['Details']
+							Controller.Update_Result_Array(TestResult)
+					
+						ResultComment.append(TextResult)
+						#CurTime = Function_Get_TimeStamp()
+						#ResultLine = CurTime + ': ' + TextResult
+						#Status_Queue.put(str(TextResult))
+			
+			#Dir, Name, Ext = Split_Path(TestCase_Path)
+
+			#Result_Path = 
+		if Test_Type not in ['ListAutoTest', 'ListManualTest']:
+			Print_Result(TestCase_Path, Export_Result, Result_Path)
+			#eval("print(Controller.Result_Array)")
+
+		return True
+
 	def Update_Action_List(self):
-		self.append_action_list(type = 'Action', name = 'Tap_Item', argument = {'string_id': 'string', 'total_attemp': 'int'}, description= '')
+		self.append_action_list(type = 'Action', name = 'Tap_Item', argument = {'string_id': 'string_id', 'total_attemp': 'int'}, description= '')
+		self.append_action_list(type = 'Action', name = 'Tap_Location', argument = {'location': 'point'}, description= '')
 		self.append_action_list(type = 'Action', name = 'Tap_Template', argument = {'image_path': 'string', 'total_attemp': 'int'}, description= '')
-		self.append_action_list(type = 'Action', name = 'Relative_Tap', argument = {'string_id': 'string', 'Delta_X': 'int', 'Delta_Y': 'int'}, description= '')
+		self.append_action_list(type = 'Action', name = 'Relative_Tap', argument = {'string_id': 'string_id', 'Delta_X': 'int', 'Delta_Y': 'int'}, description= '')
 		self.append_action_list(type = 'Action', name = 'Send_Tab_Key', argument = None, description= '')
-		self.append_action_list(type = 'Get_Result', name = 'Count_Object', argument = {'string_id':'string'}, description= '')
+		self.append_action_list(type = 'Get_Result', name = 'Count_Object', argument = {'string_id':'string_id'}, description= '')
 		self.append_action_list(type = 'Update_Variable', name = 'Update_Gacha_Pool', argument = {'db_path':'string', 'db_sheet_name': 'string', 'gacha_pool_sheet':'string'}, description= '')
 		self.append_action_list(type = 'Update_Variable', name = 'Update_Execution_List', argument = {'Execute_List':'string'}, description= '')
 		self.append_action_list(type = 'Update_Variable', name = 'Update_Execution_Value', argument = {'Execute_List':'string'}, description= '')
 		self.append_action_list(type = 'Get_Result', name = 'Analyse_Gacha_Acquired', argument = {'total_item_in_gacha': 'int'}, description= '')
 		self.append_action_list(type = 'Update_Variable', name = 'Analyse_Gacha_Result', argument = {'total_item_in_gacha': 'int'}, description= '')
-		self.append_action_list(type = 'Action', name = 'wait_for_item', argument = {'string_id':'string', 'match_rate': 'float', 'timeout': 'int'}, description= '')	
-		self.append_action_list(type = 'Action', name = 'Swipe_by_StringID', argument = {'string_id_A': 'string', 'string_id_B':'string'}	, description= '')
+		self.append_action_list(type = 'Action', name = 'wait_for_item', argument = {'string_id':'string', 'match_rate': 'float', 'timeout': 'int'}, description= '')
+
+		self.append_action_list(type = 'Action', name = 'Swipe_by_StringID', argument = {'location_A': 'point', 'location_B':'point'}	, description= '')
+		self.append_action_list(type = 'Action', name = 'Swipe_by_StringID', argument = {'string_id_A': 'string_id', 'string_id_B':'string_id'}	, description= '')
 		self.append_action_list(type = 'Action', name = 'Send_Enter_Key', argument = None, description= '')
 		self.append_action_list(type = 'Action', name = 'Input_Text', argument = {'input_text':'string'}, description= '')
 		self.append_action_list(type = 'Action', name = 'Input_Current_Value', argument = None, description= '')
 		self.append_action_list(type = 'Action', name = 'Tap_Current_Item', argument = None, description= '')
 		self.append_action_list(type = 'Action', name = 'Wait_For_Current_Item', argument = None, description= '')
 		self.append_action_list(type = 'Action', name = 'Get_Screenshot', argument = None, description= '')
-		self.append_action_list(type = 'Loop', name = 'List_Loop', argument = {'list_name': 'string'}, description= '')
+		#self.append_action_list(type = 'Loop', name = 'List_Loop', argument = {'list_name': 'string'}, description= '')
 		self.append_action_list(type = 'Loop', name = 'Loop', argument = {'amount': 'int'}, description= '')
+		self.append_action_list(type = 'Condition', name = 'If', argument = {'condition': 'string'}, description= '')
+		
+		if self.OCR:
+			self.append_action_list(type = 'Action', name = 'Scan_Text', argument = {'scan_area': 'area'}, description= '')
+		
+		self.append_action_list(type = 'Action', name = 'Tap', argument = {'touch_point': 'point'}, description= '')
 
+	def Get_Current_Screenshot(self):
+		Img_Screenshot = self.Device.screencap()
+		return Img_Screenshot
 
 	def Get_Folder(self, Path):
 
@@ -100,7 +441,14 @@ class Automation:
 		self.Result_Path = Path
 
 	def Update_DB_Path(self, Path):
-		self.Result_Path = Path	
+		self.DB_Path = Path
+		self.Function_Import_DB()
+
+	def Update_Tesseract(self, tess_path, tess_data, tess_lang):
+		self.tess_path = tess_path
+		self.tess_data = tess_data
+		self.tess_lang = tess_lang
+		self.OCR = True	
 
 	def Update_Serial_Number(self, Serial):
 		self.Device = self.Client.device(Serial)
@@ -143,6 +491,10 @@ class Automation:
 		time.sleep(STime)
 		return self.Generate_Result(Status = True)
 
+	def Tap(self, touch_point):
+		tap(self.Device, touch_point['x'], touch_point['y'])		
+		return self.Generate_Result(Status = True)
+
 	def Tap_Item(self, StringID, total_attemp = 5):
 
 		Img_Template = self.UI[StringID]['Image']	
@@ -161,7 +513,12 @@ class Automation:
 				return self.Generate_Result(Status = True)
  
 		
-		return self.Generate_Result(Status = False)
+		return self.Generate_Result(Status = False)	
+
+	def Tap_Location(self, location):
+		tap_object(self.Device, location)
+		return self.Generate_Result(Status = True)
+ 
 
 	def Tap_Template(self, image_path, total_attemp = 5):
 		if not os.path.isfile(image_path):
@@ -218,10 +575,16 @@ class Automation:
 		Img_Screenshot = cv2.imdecode(Img_Screenshot, cv2.IMREAD_COLOR)
 		Img_Template = self.UI[StringID]['Image']
 		ResultStatus, Img = Count_Object(Img_Screenshot, Img_Template)
-		
-		
-
 		return self.Generate_Result(Status = ResultStatus, Screenshot = Img)
+
+	def Scan_Text(self, scan_area):
+		try:
+			_img = self.Device.screencap()
+			imCrop = _img[int(scan_area[1]):int(scan_area[1]+scan_area[2]), int(scan_area[0]):int(scan_area[0]+scan_area[3])]
+			text = get_text_from_image(self.tess_path, self.tess_lang, self.tess_data, imCrop)
+		except:
+			return self.Generate_Result(Status = False)
+		return self.Generate_Result(Status = text)
 
 	def Update_Gacha_Pool(self, DB_Path, DB_Sheet, Gacha_Pool):
 		self.Gacha_Pool = Function_Import_DB(DB_Path, [DB_Sheet], Gacha_Pool)
@@ -331,6 +694,12 @@ class Automation:
 				ResultStatus = False
 
 		return self.Generate_Result(Status = ResultStatus, Screenshot = Img_Screenshot)
+
+	def Swipe(self, point_A, point_B):
+		
+		result = swipe(self.Device, point_A, point_B)
+
+		return self.Generate_Result(Status = result)
 
 	def Swipe_by_StringID(self, StringID_A, StringID_B):
 		

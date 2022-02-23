@@ -10,6 +10,7 @@ import time
 from datetime import datetime
 import configparser
 import random
+import csv
 
 #GUI
 from tkinter import *
@@ -19,7 +20,7 @@ from tkinter import messagebox
 from tkinter import ttk
 from tkinter import colorchooser
 from tkinter import scrolledtext 
-
+from tkinter import Toplevel 
 #from tkinter import style
 
 from openpyxl import load_workbook
@@ -289,7 +290,9 @@ class Automation_Execuser(Frame):
 		Row+=1
 		Button(Tab, width = self.Button_Width_Half, text=  "Add below", command= self.insert_treeview_below).grid(row=Row, column=10,padx=5, pady=0, sticky=W)
 		Row+=1
-		Button(Tab, width = self.Button_Width_Half, text=  "Update List", command= self.Update_Action_List).grid(row=Row, column=10,padx=5, pady=0, sticky=W)	
+		Button(Tab, width = self.Button_Width_Half, text=  "Load TC", command= self.Btn_Browse_Test_Case_File).grid(row=Row, column=10,padx=5, pady=0, sticky=W)
+		Row+=1
+		Button(Tab, width = self.Button_Width_Half, text=  "Save TC", command= self.Btn_Save_Test_Case_File).grid(row=Row, column=10,padx=5, pady=0, sticky=W)	
 		Row+=1
 		Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['Stop'], command= self.Stop).grid(row=Row, column=10,padx=5, pady=0, sticky=W)	
 		Row+=1
@@ -299,8 +302,9 @@ class Automation_Execuser(Frame):
 
 		Row += Treeview_Row
 
-		Label(Tab, text= "Action Type").grid(row=Row, column=1, columnspan=2, padx=5, pady=5, sticky=W)
-		action_type_list = ['Loop', 'Condition', 'Get_Result', 'Action', 'Update_Variable']
+		Label(Tab, text= "Action Type", width= 15).grid(row=Row, column=1, columnspan=2, padx=5, pady=5, sticky=W)
+		action_type_list = ['', 'Loop', 'Condition', 'Get_Result', 'Action', 'Update_Variable']
+		action_type_list.sort()
 		self.current_action_type.set(action_type_list[0])
 		# creating widget
 		self.action_type = OptionMenu(Tab, self.current_action_type,	*action_type_list, command=self.Update_Action_Name)
@@ -310,7 +314,7 @@ class Automation_Execuser(Frame):
 		self.action_type.grid(row=Row, column=3, padx=5, pady=5, sticky=W)
 
 
-		Label(Tab, text= "Action Name").grid(row=Row, column=5, columnspan=2, padx=5, pady=5, sticky=W)
+		Label(Tab, text= "Action Name", width= 15).grid(row=Row, column=5, columnspan=2, padx=5, pady=5, sticky=W)
 		
 	
 		# creating widget
@@ -346,8 +350,12 @@ class Automation_Execuser(Frame):
 		self.Treeview.heading('#0', text='', anchor=CENTER)
 
 		for column in self.Treeview['columns']:
-			self.Treeview.column(column, anchor=CENTER, width=100)
-			self.Treeview.heading(column, text=column, anchor=CENTER)
+			if column == 'Action':
+				self.Treeview.column(column, anchor=CENTER, width=200)
+				self.Treeview.heading(column, text=column, anchor=CENTER)
+			else:	
+				self.Treeview.column(column, anchor=CENTER, width=100)
+				self.Treeview.heading(column, text=column, anchor=CENTER)
 
 		verscrlbar.grid(row=TreeView_Row, column=Treeview_Col, rowspan=TreeView_Size, padx=5, pady=5,  sticky = N+S+E)
 		Tab.grid_columnconfigure(TreeView_Size, weight=0, pad=5)
@@ -427,7 +435,7 @@ class Automation_Execuser(Frame):
 		filename = filedialog.askopenfilename(title =  self.LanguagePack.ToolTips['SelectSource'],filetypes = (("Workbook files", "*.xlsx *.xlsm"), ), multiple = False)	
 		if filename != "":
 			self.DB_Path = self.CorrectPath(filename)
-			self.Str_DB_Path.set(self.DB_Path)
+			self.Text_DB_Path.set(self.DB_Path)
 			
 			self.AppConfig.Save_Config(self.AppConfig.Auto_Tool_Config_Path, 'AUTO_TOOL', 'db_path', self.DB_Path, True)
 			self.Write_Debug(self.LanguagePack.ToolTips['DataSelected'] + ": " + self.DB_Path)
@@ -436,34 +444,6 @@ class Automation_Execuser(Frame):
 			self.Write_Debug(self.LanguagePack.ToolTips['SourceDocumentEmpty'])
 		return
 
-
-	def OCR_Setting_Set_Scan_Type(self, scan_type):		
-		self.ScanType.set(scan_type)
-		self.AppConfig.Save_Config(self.AppConfig.Auto_Tool_Config_Path, 'AUTO_TOOL', 'scan_type', scan_type)
-		self.Write_Debug(self.LanguagePack.ToolTips['ScanTypeUpdate'] + str(scan_type) + '.')
-		if scan_type == 'DB Create':
-			self.Write_Debug(self.LanguagePack.ToolTips['DBCreate'])
-		elif scan_type == 'Text only':
-			self.Write_Debug(self.LanguagePack.ToolTips['TextScan'])
-		elif scan_type == 'Image only':
-			self.Write_Debug(self.LanguagePack.ToolTips['ImageScan'])
-		elif scan_type == 'Image and Text':
-			self.Write_Debug(self.LanguagePack.ToolTips['AdvancedScan'])
-	
-
-
-
-	def OCR_Setting_Set_Browse_Type(self):
-		_browse_type = self.Browse_Type.get()
-		if _browse_type == 1:
-			_status = 'folder'
-		else:
-			_status = 'file'
-		
-		self.AppConfig.Save_Config(self.AppConfig.Auto_Tool_Config_Path, 'OCR_TOOL', 'browsetype', _browse_type)
-
-		self.Write_Debug(self.LanguagePack.ToolTips['BrowseTypeUpdate'] + str(_status))
-
 	def OCR_Setting_Set_Working_Resolution(self):
 		_resolution_index = self.Resolution.get()
 		if _resolution_index == 1:
@@ -471,13 +451,13 @@ class Automation_Execuser(Frame):
 		else:
 			self.WorkingResolution = 1080
 		
-		self.AppConfig.Save_Config(self.AppConfig.Auto_Tool_Config_Path, 'OCR_TOOL', 'resolution', _resolution_index)
+		self.AppConfig.Save_Config(self.AppConfig.Auto_Tool_Config_Path, 'AUTO_TOOL', 'resolution', _resolution_index)
 
 		self.Write_Debug(self.LanguagePack.ToolTips['SetResolution'] + str(self.WorkingResolution) + 'p')
 
 	def OCR_Setting_Set_Working_Language(self, select_value):
 		
-		self.AppConfig.Save_Config(self.AppConfig.Auto_Tool_Config_Path, 'OCR_TOOL', 'scan_lang', select_value)
+		self.AppConfig.Save_Config(self.AppConfig.Auto_Tool_Config_Path, 'AUTO_TOOL', 'scan_lang', select_value)
 		
 		self.Write_Debug(self.LanguagePack.ToolTips['SetScanLanguage'] + str(select_value))
 	
@@ -505,14 +485,99 @@ class Automation_Execuser(Frame):
 		'''
 		Function write the text to debugger box and move to the end of the box
 		'''
+		
 		self.Debugger.insert("end", "\n")
-		self.Debugger.insert("end", str(text))
+		self.Debugger.insert("end", str(datetime.now()) + ': ' + str(text))
 
 		self.Debugger.yview(END)		
 
 	def entry_next(self, event):
 		event.widget.tk_focusNext().focus()
 		return("break")
+
+	def Get_Serial(self):
+		try:
+			client = AdbClient(host="127.0.0.1", port=5037)
+			devices = client.devices()
+			Serrial = []
+			for device in devices:
+				Serrial.append(device.serial)
+			
+			self.TextSerial.set_completion_list(Serrial)
+			self.TextSerial.current(0)
+		except:	
+			pass
+
+	def Connect_Device(self):
+		IP = self.Device_IP.get("1.0", END).replace('\n', '')
+		os.popen( ADBPATH + ' tcpip 5555')
+		os.popen( ADBPATH + ' connect ' + str(IP) + ':5555')
+		self.Get_Serial()	
+
+	def Btn_Send_Tab(self):
+		os.popen( ADBPATH + ' shell input keyevent \'61\'')
+	
+	def Btn_Send_Enter(self):
+		os.popen( ADBPATH + ' shell input keyevent \'66\'')	
+
+	def Btn_Send_4_Touch(self):
+		os.system( ADBPATH + ' forward tcp:9889 tcp:9889')
+		#Four_Touch()
+
+	def Btn_Send_Backkey(self):
+		os.popen( ADBPATH + ' shell input keyevent \'4\'')	
+
+	def Btn_Send_Home(self):
+		os.popen( ADBPATH + ' shell input keyevent \'3\'')		
+
+	def Btn_Tap_Template(self):
+		if self.Template_Path != None:
+			self.Get_Serial()
+			Serial = self.TextSerial.get().replace('\n','')
+			AutoTester = Tester(self.Status_Queue, Serial, self.DB_Path)
+			AutoTester.Tap_Template(self.Template_Path)	
+
+	def Stop(self):
+		try:
+			if self.Automation_Processor.is_alive():
+				self.Automation_Processor.terminate()
+		except:
+			pass
+		self.Show_Error_Message('Test is terminated')
+
+
+	# Other function
+	def Btn_OCR_Update_Working_Language(self):
+		_data_ = str(self.TesseractDataPath.get())
+		_exe_ = str(self.TesseractPath.get())
+		_tessdata_dir_config = '--tessdata-dir ' + "\"" + _data_ + "\""
+		pytesseract.pytesseract.tesseract_cmd = _exe_
+		#self.language_list = pytesseract.get_languages(config=_tessdata_dir_config)
+		try:
+			self.language_list = pytesseract.get_languages(config=_tessdata_dir_config)
+			self.Write_Debug('Supported language list has been updated!')
+
+		except Exception as e:
+			self.Write_Debug('Tess path: ' + str(_exe_))
+			self.Write_Debug('Data path: ' + str(_data_))
+			self.Write_Debug('Error while updating supported language: ' + str(e))
+			self.language_list = ['']
+
+		self.option_working_language.set_completion_list(self.language_list)
+
+	def ClearLog(self):
+		self.Debugger.delete('1.0', END)
+		return
+
+	def Get_Test_Info(self):
+		Test_Case = self.Str_Test_Case_Path.get()
+		All = Function_Import_TestCase(Test_Case)
+		TestInfo = All['Info']
+		for Key in TestInfo:
+			self.Debugger.insert("end", "\n\r")
+			self.Debugger.insert("end", str(Key) + ':' + str(TestInfo[Key]))
+			self.Debugger.yview(END)	
+		
 
 ###########################################################################################
 # Treeview FUNCTION
@@ -565,25 +630,23 @@ class Automation_Execuser(Frame):
 		'''
 		Add a row to the current Treeview
 		'''
-		values = self.generate_step_data()
-		self.Treeview.insert('', 'end', text= '', values=values)
+		self.Generate_Arg_Input_Window('end')
+		
 
 	def insert_treeview_above(self):
 		'''
 		Add a row above the current Treeview
 		'''
-
 		index = self.Treeview.index(self.Treeview.focus())
-		values = self.generate_step_data()
-		self.Treeview.insert('', index, text= '', values=values)
+		self.Generate_Arg_Input_Window(index)
+		
 
 	def insert_treeview_below(self):
 		'''
 		Add a row below the current Treeview
 		'''
-		index = self.Treeview.index(self.Treeview.focus())
-		values = self.generate_step_data()
-		self.Treeview.insert('', index+1, text= '', values=values)
+		index = self.Treeview.index(self.Treeview.focus()) + 1
+		self.Generate_Arg_Input_Window(index)
 		
 
 	def remove_treeview(self):
@@ -708,51 +771,7 @@ class Automation_Execuser(Frame):
 
 			#self.Treeview.item(self.Focused_Item, text="", values=(child["values"]))
 			self.Focused_Item = None
-			
-
-	# Background function
-	def Get_Serial(self):
-		try:
-			client = AdbClient(host="127.0.0.1", port=5037)
-			devices = client.devices()
-			Serrial = []
-			for device in devices:
-				Serrial.append(device.serial)
-			
-			self.TextSerial.set_completion_list(Serrial)
-			self.TextSerial.current(0)
-		except:	
-			pass
-
-	def Connect_Device(self):
-		IP = self.Device_IP.get("1.0", END).replace('\n', '')
-		os.popen( ADBPATH + ' tcpip 5555')
-		os.popen( ADBPATH + ' connect ' + str(IP) + ':5555')
-		self.Get_Serial()	
-
-	def Btn_Send_Tab(self):
-		os.popen( ADBPATH + ' shell input keyevent \'61\'')
 	
-	def Btn_Send_Enter(self):
-		os.popen( ADBPATH + ' shell input keyevent \'66\'')	
-
-	def Btn_Send_4_Touch(self):
-		os.system( ADBPATH + ' forward tcp:9889 tcp:9889')
-		#Four_Touch()
-
-	def Btn_Send_Backkey(self):
-		os.popen( ADBPATH + ' shell input keyevent \'4\'')	
-
-	def Btn_Send_Home(self):
-		os.popen( ADBPATH + ' shell input keyevent \'3\'')		
-
-	def Btn_Tap_Template(self):
-		if self.Template_Path != None:
-			self.Get_Serial()
-			Serial = self.TextSerial.get().replace('\n','')
-			AutoTester = Tester(self.Status_Queue, Serial, self.DB_Path)
-			AutoTester.Tap_Template(self.Template_Path)
-
 	def Update_Execute_List(self):
 		print('Update execution list.')
 		try:
@@ -766,10 +785,13 @@ class Automation_Execuser(Frame):
 		menu = self.action_name["menu"]
 		menu.delete(0, 'end')
 		this_type = self.current_action_type.get()
-		temp_action_list = self.action_dict[this_type]
 		action_list = []
-		for action in temp_action_list:
-			action_list.append(action)
+		if this_type != '':
+			temp_action_list = self.action_dict[this_type]
+			for action in temp_action_list:
+				action_list.append(action)
+		
+		action_list.sort()
 		
 		for value in action_list:
 			menu.add_command(label=value, command=lambda _value=value: [lambda v=_value: self.current_action_name.set(_value), self.Update_Action_Arg(_value)])
@@ -790,57 +812,125 @@ class Automation_Execuser(Frame):
 	def generate_step_data(self):
 		this_type = self.current_action_type.get()
 		this_action = self.current_action_name.get()
-		if self.action_dict[this_type][this_action] != None:
-			this_arg = [*self.action_dict[this_type][this_action]]
-		else:
-			this_arg = []
-		values = [this_type] + [this_action] + this_arg
+		values = [this_type] + [this_action] + self.input_value
 
 		return values
 
+	def Generate_Arg_Input_Window(self, treeview_index):
+		this_type = self.current_action_type.get()
+		this_action = self.current_action_name.get()
+		arg_dict = self.action_dict[this_type][this_action]
+		if arg_dict == None:
+			self.Get_Input_Value_On_Closing(None,[],treeview_index)
+			return
+
+		child_windows = Toplevel(self.parent)
+		#child_windows.geometry("200x200")  # Size of the window 
+		child_windows.resizable(False, False)
+		child_windows.title("Input the action argument")
+		StringVar()
+		
+		arg_name = [*arg_dict]
+		row = 1
+		value_array = []
+		button_array = []
+		arg_data_list = []
+		if len(arg_name) > 0:
+			for arg in arg_name:
+				arg_data = {}
+				arg_data['variable_type'] = None
+				arg_data['value_variable'] = None
+				arg_data['widget'] = None
+
+				Label(child_windows, text= arg, anchor=S, justify=LEFT).grid(row=row,column=1, padx=10, pady=10, sticky=S)
+				#value_array[row] = StringVar()
+				temp_Variable_type = arg_dict[arg]
+				if temp_Variable_type == None:
+					arg_data['variable_type'] = None
+					Label(child_windows, text= 'N/A').grid(row=row,column=2, padx=10, pady=10, sticky=S)
+				elif temp_Variable_type.startswith('_'):
+					# If variable type has the '_' before the type name, that arg cannot leave as empty.
+					arg_data['variable_type'] = temp_Variable_type[1:]
+					arg_data['input_require'] = True
+				else:
+					arg_data['variable_type'] = temp_Variable_type
+					arg_data['input_require'] = False
+				
+				if arg_data['variable_type'] in ['string', 'int']:
+					arg_data['widget'] = Text(child_windows, height = 1, width=30)
+					arg_data['widget'].grid(row=row,column=2, padx=10, pady=10, sticky=S)
+				elif arg_data['variable_type'] == 'string_id':
+					arg_data['value_variable'] = StringVar()
+					value_list = [*self.AutoTester.UI]
+					value_list.sort()
+					arg_data['value_variable'].set(value_list[0])
+					# creating widget
+					arg_data['widget'] = AutocompleteCombobox(child_windows)
+					arg_data['widget'].set_completion_list(value_list)
+					self.ExecuteList.Set_Entry_Width(30)
+					arg_data['widget'].grid(row=row,column=2, padx=10, pady=10, sticky=S)
+				elif arg_data['variable_type'] == 'point':
+					Label(child_windows, text= 'WIP').grid(row=row,column=2, padx=10, pady=10, sticky=S)
+				elif arg_data['variable_type'] == 'area':
+					Label(child_windows, text= 'WIP').grid(row=row,column=2, padx=10, pady=10, sticky=S)
+
+				arg_data_list.append(arg_data)
+				row +=1
+		child_windows.protocol("WM_DELETE_WINDOW", lambda c=child_windows,i=treeview_index, a=arg_data_list: self.Get_Input_Value_On_Closing(c,a,i))		
+		Button(child_windows, text = 'Set value', command = lambda c=child_windows,i=treeview_index, a=arg_data_list: self.Get_Input_Value_On_Closing(c,a,i)).grid(row=row,column=2, padx=10, pady=10, sticky=E)
+
+	def Get_Input_Value_On_Closing(self,child_windows, arg_data_list, treeview_index):
+		this_type = self.current_action_type.get()
+		this_action = self.current_action_name.get()
+	
+		input_value = []
+		for arg_data in arg_data_list:
+			temp_value = None
+			if arg_data['variable_type'] == None:
+				temp_value = ''
+			elif arg_data['variable_type'] in ['string', 'int']:
+				temp_value = arg_data['widget'].get("1.0", END)
+				
+			elif arg_data['variable_type'] == 'string_id':
+				temp_value = arg_data['widget'].get()
+				
+			elif arg_data['variable_type'] == 'point':
+				temp_value = arg_data['widget'].get("1.0", END)
+				
+			elif arg_data['variable_type'] == 'area':
+				temp_value = arg_data['widget'].get("1.0", END)
+			else:
+				self.input_value.append("")
+			input_value.append(temp_value)
+		values = [this_type] + [this_action] + input_value
+
+		self.Treeview.insert('', treeview_index, text= '', values=values)
+		
+		if this_type == 'Loop':
+			self.Treeview.insert('', treeview_index, text= '', values=['Loop','End Loop'])
+		elif this_type == 'Condition':
+			self.Treeview.insert('', treeview_index, text= '', values= ['Condition', 'End If'])
+		if child_windows != None:
+			child_windows.destroy()	
+
+	def get_location_on_click(self):
+		img = self.AutoTester.Get_Current_Screenshot()
+		cv2.imshow('Game screen', img)
+		# setting mouse handler for the image
+		# and calling the click_event() function
+		cv2.setMouseCallback('image', self.click_event)
+	
+		# wait for a key to be pressed to exit
+		cv2.waitKey(0)
+		# close the window
+		cv2.destroyAllWindows()
+
+	def click_event(self, event, x, y, flags, params):
+
+		return 0,0
 
 	# Other function
-	def Stop(self):
-		try:
-			if self.Automation_Processor.is_alive():
-				self.Automation_Processor.terminate()
-		except:
-			pass
-		self.Show_Error_Message('Test is terminated')
-
-
-	# Other function
-	def Btn_OCR_Update_Working_Language(self):
-		_data_ = str(self.TesseractDataPath.get())
-		_exe_ = str(self.TesseractPath.get())
-		_tessdata_dir_config = '--tessdata-dir ' + "\"" + _data_ + "\""
-		pytesseract.pytesseract.tesseract_cmd = _exe_
-		#self.language_list = pytesseract.get_languages(config=_tessdata_dir_config)
-		try:
-			self.language_list = pytesseract.get_languages(config=_tessdata_dir_config)
-			self.Write_Debug('Supported language list has been updated!')
-
-		except Exception as e:
-			self.Write_Debug('Tess path: ' + str(_exe_))
-			self.Write_Debug('Data path: ' + str(_data_))
-			self.Write_Debug('Error while updating supported language: ' + str(e))
-			self.language_list = ['']
-
-		self.option_working_language.set_completion_list(self.language_list)
-
-	def ClearLog(self):
-		self.Debugger.delete('1.0', END)
-		return
-
-	def Get_Test_Info(self):
-		Test_Case = self.Str_Test_Case_Path.get()
-		All = Function_Import_TestCase(Test_Case)
-		TestInfo = All['Info']
-		for Key in TestInfo:
-			self.Debugger.insert("end", "\n\r")
-			self.Debugger.insert("end", str(Key) + ':' + str(TestInfo[Key]))
-			self.Debugger.yview(END)	
-
+	
 	def Update_Action_List(self):
 		print('Update action list to drop list')
 		for action in self.AutoTester.action_list:
@@ -905,22 +995,8 @@ class Automation_Execuser(Frame):
 		messagebox.showinfo('Error...', ErrorText)	
 
 	def SaveAppLanguage(self, language):
-
-		self.Notice.set('Update app language...') 
-
-		config = configparser.ConfigParser()
-		config.read(self.AppConfig)
-		if not config.has_section('DocumentToolkit'):
-			config.add_section('DocumentToolkit')
-			cfg = config['DocumentToolkit']	
-		else:
-			cfg = config['DocumentToolkit']
-
-		cfg['applang']= language
-		with open(self.AppConfig, 'w') as configfile:
-			config.write(configfile)
-		self.Notice.set('Config saved...')
-		return
+		self.Write_Debug(self.LanguagePack.ToolTips['AppLanuageUpdate'] + " "+ language) 
+		self.AppConfig.Save_Config(self.AppConfig.Auto_Tool_Config_Path, 'AUTO_TOOL', 'app_lang', language)
 
 	def SetLanguageKorean(self):
 		self.AppLanguage = 'kr'
@@ -935,128 +1011,26 @@ class Automation_Execuser(Frame):
 	def Menu_Function_Open_Main_Guideline(self):
 		#webbrowser.open_new(r"https://confluence.nexon.com/pages/viewpage.action?pageId=298119695")
 		print('Done')
-
-	def Function_Correct_Path(self, path):
-		#print("path", path)
-		return str(path).replace('/', '\\')
 	
-	def Function_Correct_EXT(self, path, ext):
-		if path != None and ext != None:
-			Outputdir = os.path.dirname(path)
-			baseName = os.path.basename(path)
-			sourcename, Obs_ext = os.path.splitext(baseName)
-			newPath = self.CorrectPath(Outputdir + '/'+ sourcename + '.' + ext)
-			return newPath
 
 	def ErrorMsg(self, ErrorText):
 		messagebox.showinfo('Error...', ErrorText)	
 
 	def OpenOutput(self):
 		Source = self.ListFile[0]
-
 		Outputdir = os.path.dirname(Source)
 		BasePath = str(os.path.abspath(Outputdir))
 		subprocess.Popen('explorer ' + BasePath)
-		
-	def BtnLoadDocument(self):
-		filename = filedialog.askopenfilename(title =  self.LanguagePack.ToolTips['SelectSource'],filetypes = (("All type files","*.docx *.xlsx *.pptx *.msg"), ("Workbook files","*.xlsx *.xlsm"), ("Document files","*.docx"), ("Presentation files","*.pptx"), ("Email files","*.msg")), multiple = True)	
-		if filename != "":
-			self.ListFile = list(filename)
-			self.CurrentSourceFile.set(str(self.ListFile[0]))
-			self.Notice.set(self.LanguagePack.ToolTips['SourceSelected'])
-		else:
-			self.Notice.set(self.LanguagePack.ToolTips['SourceDocumentEmpty'])
-		return
 
-	def BtnLoadRawSource(self):
-		#filename = filedialog.askopenfilename(title =  self.LanguagePack.ToolTips['SelectSource'],filetypes = (("Workbook files","*.xlsx *.xlsm *xlsb"), ("Document files","*.docx")), multiple = True)	
-		FolderName = filedialog.askdirectory(title =  self.LanguagePack.ToolTips['SelectSource'])	
-		if FolderName != "":
-			self.RawFile = FolderName
-			self.RawSource.set(str(FolderName))
-			
-			self.Notice.set(self.LanguagePack.ToolTips['SourceSelected'])
-		else:
-			self.Notice.set(self.LanguagePack.ToolTips['SourceDocumentEmpty'])
-		return
-		'''
-		if filename != "":
-			self.RawFile = list(filename)
-			self.RawSource.set(self.RawFile)
-			self.Notice.set(self.LanguagePack.ToolTips['SourceSelected'])
-		else:
-			self.Notice.set(self.LanguagePack.ToolTips['SourceDocumentEmpty'])
-		return
-		'''
-
-	def BtnLoadTrackingSource(self):
-		filename = filedialog.askopenfilename(title =  self.LanguagePack.ToolTips['SelectSource'],filetypes = (("TM file","*.pkl"),),)	
-		if filename != "":
-			self.TrackingFile = self.CorrectPath(filename)
-			print(self.TrackingFile)
-			self.TrackingSource.set(self.CorrectPath(self.TrackingFile))
-			self.Notice.set(self.LanguagePack.ToolTips['SourceSelected'])
-		else:
-			self.Notice.set(self.LanguagePack.ToolTips['SourceDocumentEmpty'])
-		return
-
-	def BtnLoadRawTM(self):
-		filename = filedialog.askopenfilename(title =  self.LanguagePack.ToolTips['SelectSource'],filetypes = (("TM file","*.pkl"),), multiple = True)	
-		if filename != "":
-			self.RawTMFile = list(filename)
-			Display = self.CorrectPath(self.RawTMFile[0])
-			self.RawTMSource.set(Display)
-			
-			self.Notice.set(self.LanguagePack.ToolTips['SourceSelected'])
-		else:
-			self.Notice.set(self.LanguagePack.ToolTips['SourceDocumentEmpty'])
-		return
-	
 	
 	def BtnSelectColour(self):
 		colorStr, self.BackgroundColor = colorchooser.askcolor(parent=self, title='Select Colour')
-		
-		
 		if self.BackgroundColor == None:
 			self.ErrorMsg('Set colour as defalt colour (Yellow)')
 			self.BackgroundColor = 'ffff00'
 		else:
 			self.BackgroundColor = self.BackgroundColor.replace('#', '')
-		#print(colorStr)
-		#print(self.BackgroundColor)
-		return
 
-	def Btn_Browse_Old_Data_Folder(self):
-		FolderName = filedialog.askdirectory(title =  self.LanguagePack.ToolTips['SelectSource'])	
-		if FolderName != "":
-			self.OldDataTable = FolderName
-			self.OldDataString.set(str(FolderName))
-			
-			self.Notice.set(self.LanguagePack.ToolTips['SourceSelected'])
-		else:
-			self.Notice.set(self.LanguagePack.ToolTips['SourceDocumentEmpty'])
-		return
-
-	def Btn_Browse_New_Data_Folder(self):
-		FolderName = filedialog.askdirectory(title =  self.LanguagePack.ToolTips['SelectSource'])	
-		if FolderName != "":
-			self.NewDataTable = FolderName
-			
-			self.NewDataString.set(str(FolderName))
-			
-			self.Notice.set(self.LanguagePack.ToolTips['SourceSelected'])
-		else:
-			self.Notice.set(self.LanguagePack.ToolTips['SourceDocumentEmpty'])
-		return	
-
-	def BtnLoadDataLookupSource(self):
-		filename = filedialog.askopenfilename(title =  self.LanguagePack.ToolTips['SelectSource'],filetypes = (("Workbook files *.xlsx"), ), multiple = True)	
-		if filename != "":
-			self.RawFile = list(filename)
-			self.RawSource.set(self.RawFile)
-			self.Notice.set(self.LanguagePack.ToolTips['SourceSelected'])
-		else:
-			self.Notice.set(self.LanguagePack.ToolTips['SourceDocumentEmpty'])
 		return
 
 	def onExit(self):
@@ -1065,7 +1039,7 @@ class Automation_Execuser(Frame):
 
 	def init_App_Setting(self):
 		
-		self.Str_DB_Path = StringVar()
+		self.Text_DB_Path = StringVar()
 		self.Str_Test_Case_Path = StringVar()
 
 		self.TesseractPath = StringVar()
@@ -1074,8 +1048,6 @@ class Automation_Execuser(Frame):
 		self.language_list = ['']
 
 		self.DBPath = StringVar()
-
-		self.Browse_Type = IntVar()
 
 		self.Resolution = IntVar()
 		self.CurrentDataSource = StringVar()
@@ -1102,9 +1074,7 @@ class Automation_Execuser(Frame):
 
 		_db_path = self.Configuration['AUTO_TOOL']['db_path']
 		self.DBPath.set(_db_path)
-
-		_browse_type = self.Configuration['AUTO_TOOL']['browsetype']
-		self.Browse_Type.set(_browse_type)
+		self.DB_Path = _db_path
 
 		_resolution = self.Configuration['AUTO_TOOL']['resolution']
 		self.Resolution.set(_resolution)
@@ -1115,12 +1085,12 @@ class Automation_Execuser(Frame):
 		_working_language = self.Configuration['AUTO_TOOL']['scan_lang']
 		self.option_working_language.set(_working_language)
 
-		_scan_type = self.Configuration['AUTO_TOOL']['scan_type']
-		self.ScanType.set(_scan_type)
-
 		#self.action_name.set_completion_list([''])
-		action_type = ['Loop', 'Condition', 'Get_Result', 'Action', 'Update_Variable',]
+		action_type = ['Action', 'Loop', 'Condition', 'Get_Result', 'Update_Variable']
+		action_type.sort()
+
 		self.action_dict = {}
+
 		for type in action_type:
 			self.action_dict[type] = {}
 
@@ -1130,8 +1100,11 @@ class Automation_Execuser(Frame):
 				this_action = {action['name']: action['arg']}
 				self.action_dict[action['type']][action['name']] = action['arg']
 		self.Update_Action_Name()	
+		
+		self.AutoTester.Update_DB_Path(self.DB_Path)
 
-
+		if self.TesseractPath != None and self.TesseractDataPath != None and _working_language != None:
+			self.AutoTester.Update_Tesseract(self.TesseractPath, self.TesseractDataPath, _working_language)
 
 
 	
@@ -1153,7 +1126,7 @@ class Automation_Execuser(Frame):
 			
 		filename = filedialog.askopenfilename(title =  self.LanguagePack.ToolTips['SelectSource'],filetypes = (("Template files", "*.jpg *.png"), ), multiple = False)	
 		if filename != "":
-			self.Template_Path = self.Function_Correct_Path(filename)
+			self.Template_Path = self.CorrectPath(filename)
 			self.Str_Template_Path.set(filename)
 			self.Notice.set(self.LanguagePack.ToolTips['SourceSelected'])
 		else:
@@ -1161,22 +1134,61 @@ class Automation_Execuser(Frame):
 		return
 
 	def Btn_Browse_Test_Case_File(self):
+		config_file = filedialog.askopenfilename(initialdir = CWD + "//Testcase", title =  self.LanguagePack.ToolTips['SelectSource'], filetypes = (("Config files", "*.csv *.xlsx"), ), multiple = False)	
 		
-		filename = filedialog.askopenfilename(initialdir = CWD + "//Testcase", title =  self.LanguagePack.ToolTips['SelectSource'],filetypes = (("Workbook files", "*.xlsx *.xlsm"), ), multiple = False)
-		#cwd
-		if filename != "":
-			self.Test_Case_Path = self.Function_Correct_Path(filename)
-			self.Str_Test_Case_Path.set(self.Test_Case_Path)
-			self.Notice.set(self.LanguagePack.ToolTips['SourceSelected'])
+		if os.path.isfile(config_file):
+			self.Str_Test_Case_Path.set(config_file)
+			self.remove_treeview()
+
+			all_col = ['Type', 'Action', 'Arg1', 'Arg2', 'Arg3', 'Arg4', 'Arg5', 'Arg6']
+			
+			with open(config_file, newline='', encoding='utf-8-sig') as csvfile:
+				reader = csv.DictReader(csvfile)
+				
+				for location in reader:
+					values = []
+					for col in all_col:
+						if col in location:
+							value = str(location[col])
+						else:
+							value = ""
+						values.append(value)	
+					self.Treeview.insert('', 'end', text= '', values=values)
 		else:
-			self.Notice.set(self.LanguagePack.ToolTips['SourceDocumentEmpty'])
-		return
+			self.Write_Debug(self.LanguagePack.ToolTips['SourceDocumentEmpty'])
+
+	def Btn_Save_Test_Case_File(self):
+		'''
+		Save all added scan areas to csv file.
+		'''
+		filename = filedialog.asksaveasfilename(title = "Select file", filetypes = (("Scan Config", "*.csv"),),)
+		filename = self.CorrectExt(filename, "csv")
+		if filename == "":
+			return
+		else:
+			with open(filename, 'w', newline='') as csvfile:
+
+				fieldnames = ['Type', 'Action', 'Arg1', 'Arg2', 'Arg3', 'Arg4', 'Arg5', 'Arg6']
+			
+				writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+				writer.writeheader()
+				for row in self.Treeview.get_children():
+					child = self.Treeview.item(row)
+					temp_values = child["values"]
+					values = []
+					for i in range(len(fieldnames)):
+						if len(temp_values) < i+1:
+							values.append('')
+						else:
+							values.append(temp_values[i])
+
+					writer.writerow({'Type': values[0], 'Action': values[1], 'Arg1': values[2], 'Arg2': values[3], 'Arg3': values[4], 'Arg4': values[5], 'Arg5': values[6], 'Arg6': values[7]})
 
 	def Btn_Execute_Script(self):
 	
 		self.Btn_Generate_TestCase()
 
-		DB_Path = self.Str_DB_Path.get()
+		DB_Path = self.Text_DB_Path.get()
 		Execute_Value = self.ExecuteList.get().replace('\n','')
 		Test_Case_Path = self.Str_Test_Case_Path.get()
 		Serial = self.TextSerial.get().replace('\n','')
@@ -1221,7 +1233,7 @@ class Automation_Execuser(Frame):
 			#self.Show_Error_Message('Test is completed')
 
 	def Btn_Generate_TestCase(self):
-		DB = self.Str_DB_Path.get()
+		DB = self.Text_DB_Path.get()
 		
 		Test_Case = self.Str_Test_Case_Path.get()
 		Serial = self.TextSerial.get().replace('\n','')

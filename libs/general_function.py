@@ -8,6 +8,8 @@ import numpy as np
 from openpyxl import load_workbook
 from openpyxl.styles import Alignment
 
+import pytesseract
+
 from datetime import datetime
 import time
 import imutils
@@ -326,6 +328,11 @@ def Sleep(total_miliseconds):
 
 def tap(Device, x, y):
 	command = "input tap " + str(x) + " " + str(y)
+	Device.shell(command)
+	return
+
+def tap_location(Device, location):
+	command = "input tap " + str(location['x']) + " " + str(location['y'])
 	Device.shell(command)
 	return
 
@@ -730,3 +737,9 @@ def Function_Execute_TestCase(TestSteps, Controller, TestCase_Path, Result_Path,
 
 	return True
 
+def get_text_from_image(tess_path, tess_language, tess_data, input_image):
+	pytesseract.pytesseract.tesseract_cmd = tess_path
+	advanced_tessdata_dir_config = '--psm 7 --tessdata-dir ' + '"' + tess_data + '"'
+	ocr = pytesseract.image_to_string(input_image, lang = tess_language, config=advanced_tessdata_dir_config)
+	ocr = ocr.replace("\n", "").replace("\r", "").replace("\x0c", "")
+	return ocr
