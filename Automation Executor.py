@@ -266,18 +266,25 @@ class Automation_Execuser(Frame):
 		#Button(Tab, width = self.Button_Width_Half, text=  'Get Test info', command= self.Btn_Generate_TestCase).grid(row=Row, column=10,padx=0, pady=0, sticky=W)
 
 		Row += 1
-		Label(Tab, text= self.LanguagePack.Label['WorkingLang']).grid(row=Row, column=1, columnspan=2, padx=5, pady=5, sticky=W)
-		self.option_working_language = AutocompleteCombobox(Tab)
-		self.option_working_language.Set_Entry_Width(20)
-		self.option_working_language.grid(row=Row, column=3, padx=5, pady=5, sticky=W)
-		Button(Tab, width = self.Button_Width_Half, text=  "Refresh", command= self.Btn_OCR_Update_Working_Language).grid(row=Row, column=4, columnspan=2, padx=5, pady=0)	
+	
 		
 		Label(Tab, text= "Device IP").grid(row=Row, column=7, padx=5, pady=5, sticky=W)	
 		self.Device_IP = Text(Tab, width=30, height=1, undo=True, wrap=WORD)
 		self.Device_IP.grid(row=Row, column=8, columnspan=2, padx=5, pady=5, sticky=E)
 		self.Device_IP.insert("end", "0.0.0.0")
 		Button(Tab, width = self.Button_Width_Half, text=  "Wireless Connect", command= self.Connect_Device).grid(row=Row, column=10, padx=5, pady=0, sticky=W)
+		
+		Row +=1
+		Label(Tab, text= self.LanguagePack.Label['WorkingLang']).grid(row=Row, column=1, columnspan=2, padx=5, pady=5, sticky=W)
+		self.option_working_language = AutocompleteCombobox(Tab)
+		self.option_working_language.Set_Entry_Width(20)
+		self.option_working_language.grid(row=Row, column=3, padx=5, pady=5, sticky=W)
+		Button(Tab, width = self.Button_Width_Half, text=  "Refresh", command= self.Btn_OCR_Update_Working_Language).grid(row=Row, column=4, columnspan=2, padx=5, pady=0)	
 
+		Label(Tab, text= self.LanguagePack.Label['WorkingRes']).grid(row=Row, column=7, padx=5, pady=0, sticky=W)
+		Radiobutton(Tab, width= 10, text=  '720p', value=1, variable=self.Resolution, command= self.OCR_Setting_Set_Working_Resolution).grid(row=Row, column=8, padx=5, pady=5, sticky=W)
+		Radiobutton(Tab, width= 10, text=  '1080p', value=2, variable=self.Resolution, command= self.OCR_Setting_Set_Working_Resolution).grid(row=Row, column=9, padx=5, pady=5, sticky=W)
+	
 		Row+=1
 		Treeview_Row = 20
 		self.Generate_Treeview_Advanced_UI(Tab, Row, Treeview_Row)
@@ -569,6 +576,8 @@ class Automation_Execuser(Frame):
 
 		self.option_working_language.set_completion_list(self.language_list)
 
+
+
 	def ClearLog(self):
 		self.Debugger.delete('1.0', END)
 		return
@@ -805,7 +814,13 @@ class Automation_Execuser(Frame):
 
 	def Generate_Arg_Input_Window(self, treeview_index):
 		this_type = self.current_action_type.get()
+		if this_type == '':
+			messagebox.showinfo('Error...', 'Please select an action type')	
+			return
 		this_action = self.current_action_name.get()
+		if this_action == '':
+			messagebox.showinfo('Error...', 'Please select an action name')	
+			return
 		arg_dict = self.action_dict[this_type][this_action]
 		if arg_dict == None:
 			self.Get_Input_Value_On_Closing(None,[],treeview_index)
@@ -1105,9 +1120,10 @@ class Automation_Execuser(Frame):
 		self.WorkingLanguage = StringVar()
 		self.language_list = ['']
 
+		self.Resolution = IntVar()
+
 		self.DBPath = StringVar()
 
-		self.Resolution = IntVar()
 		self.CurrentDataSource = StringVar()
 
 		self.ScanType = StringVar()
@@ -1134,8 +1150,6 @@ class Automation_Execuser(Frame):
 		self.Text_DB_Path.set(_db_path)
 		self.DB_Path = _db_path
 		
-		
-
 		_resolution = self.Configuration['AUTO_TOOL']['resolution']
 		self.Resolution.set(_resolution)
 
@@ -1235,22 +1249,43 @@ class Automation_Execuser(Frame):
 
 		DB_Path = self.Text_DB_Path.get()
 		Execute_Value = self.ExecuteList.get().replace('\n','')
-		Test_Case_Path = self.Str_Test_Case_Path.get()
+		
 		Serial = self.TextSerial.get().replace('\n','')
 		#MyDB = self.Function_Import_DB(self.DB_Path)
 		try:
 			self.Automation_Processor.terminate()
 		except Exception as e:
 			pass
-
-		Dir, Name, Ext = Split_Path(Test_Case_Path)
-		Result_Folder_Path = Dir + '\\Result' + '_' + Name + '_' + Function_Get_TimeStamp()
+		
+		Test_Case_Path = self.Str_Test_Case_Path.get()
+		if Test_Case_Path == "":
+			Result_Folder_Path == CWD + '\\Result' + '_' + 'General_Test_Case' + '_' + Function_Get_TimeStamp()
+		else:
+			Dir, Name, Ext = Split_Path(Test_Case_Path)
+			Result_Folder_Path = Dir + '\\Result' + '_' + Name + '_' + Function_Get_TimeStamp()
 		Init_Folder(Result_Folder_Path)
 		
 		Result_File_Path = Result_Folder_Path + '\\' + Name + '_' + Function_Get_TimeStamp() + Ext
 
-
-		self.Automation_Processor = Process(target=Function_Execute_Script, args=(self.Status_Queue, self.Result_Queue, self.AutoTester, DB_Path, Test_Case_Path, Result_Folder_Path, self.TestCase, Execute_Value,))
+		test_object = []
+		for row in self.Treeview.get_children():
+			child = self.Treeview.item(row)
+			test_object.append(child['values'])
+		if len(test_object) < 1:
+			messagebox.showinfo('Error...', 'Please add atleast 1 action before running the application')
+			return
+		self.Automation_Processor = Process(	target = Function_Execute_Script,
+											kwargs= {	'Status_Queue' : self.Status_Queue, 
+														'Result_Queue' : self.Result_Queue, 
+														'AutoTester' : self.AutoTester, 
+														'DB_Path' : DB_Path, 
+														'Test_Case_Path' : Test_Case_Path, 
+														'Result_Folder_Path' : Result_Folder_Path,
+														'TestCaseObject' : test_object,
+														'Execute_Value' : Execute_Value, 
+													},
+										)
+		
 		#Status_Queue, Result_Queue, Serial_Nummber, DB_Path, Test_Case_Path, TestCaseObject = []
 		#self.Data_Compare_Process = Process(target=Old_Function_Compare_Excel, args=(self.Status_Queue, self.Process_Queue, Old_File, New_File, Output_Result, Sheet_Name, Index_Col, self.Background_Color, self.Font_Color,))
 		self.Automation_Processor.start()
@@ -1331,7 +1366,7 @@ class Automation_Execuser(Frame):
 def Function_Execute_Script(
 		Status_Queue, Result_Queue, AutoTester, DB_Path, Test_Case_Path, Result_Folder_Path,TestCaseObject = [], Execute_Value = None, **kwargs
 ):
-	All = TestCaseObject	
+	print("All variable:", locals())
 	Status_Queue.put("Importing test case config")
 
 	#os.system( ADBPATH + ' forward tcp:9889 tcp:9889')
@@ -1340,16 +1375,16 @@ def Function_Execute_Script(
 	if Connect_Status == False:
 		Status_Queue.put('Device is not connected.')
 		return
-	if not os.path.isfile(Test_Case_Path):
-		Status_Queue.put("Testcase is not exist")
-		return
 
-	if All == None or All 	== []:
-		Status_Queue.put('Loading test case')
-		All = Function_Import_TestCase(Test_Case_Path)
-	
-	TestCase = All['Testcase']
-	TestInfo = All['Info']
+	if TestCaseObject == None or TestCaseObject == []:
+		Status_Queue.put('No action is added')
+		return
+	else:
+		# Generate Testcase from TestCaseObject	
+		print("WIP")
+	# Update TestCaseObject structure:
+	TestCase = TestCaseObject['Testcase']
+	TestInfo = TestCaseObject['Info']
 	for detail in TestInfo:
 		Status_Queue.put( detail +': '+ str(TestInfo[detail]))
 	
@@ -1357,12 +1392,12 @@ def Function_Execute_Script(
 	Test_Type = TestInfo['Type']
 	
 	if Test_Type == 'GachaTest':
-		Data = Function_Import_Data(Test_Case_Path, TestInfo['StringID'])
+		Data = TestCaseObject['Data']
 		Status_Queue.put('Update Gacha Pool')
 		AutoTester.Update_Gacha_Pool(DB_Path, TestInfo['Category'], Data)
 	
 	elif Test_Type in ['ListAutoTest', 'ListManualTest']:
-		Data = Function_Import_Data(Test_Case_Path, TestInfo['StringID'])
+		Data = TestCaseObject['Data']
 		print('Data sheet:', Data)
 		Status_Queue.put('Update Execution List')
 		AutoTester.Update_Execution_List(Data)
