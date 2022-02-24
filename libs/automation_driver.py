@@ -32,7 +32,7 @@ class Automation:
 	def __init__(self, Status_Queue, Serial = None, DB_Path = None, Result_Folder_Path = None):
 		self.Debugger = Status_Queue
 		
-		self.Client = AdbClient(host="127.0.0.1", port=8080)
+		self.Client = AdbClient(host="127.0.0.1", port=5037)
 
 		if Serial != None:	
 			if self.Client != None:	
@@ -426,10 +426,12 @@ class Automation:
 		self.append_action_list(type = 'Loop', name = 'Loop', argument = {'amount': 'int'}, description= '')
 		self.append_action_list(type = 'Condition', name = 'If', argument = {'condition': 'string'}, description= '')
 		
-		if self.OCR:
+		if self.OCR == True:
 			self.append_action_list(type = 'Action', name = 'Scan_Text', argument = {'scan_area': 'area'}, description= '')
+			#self.append_action_list(type = 'Action', name = 'Test_Scan_Text', argument = {'scan_area': 'area', '2nd_scan_area': 'area'}, description= '')
 		
 		self.append_action_list(type = 'Action', name = 'Tap', argument = {'touch_point': 'point'}, description= '')
+		#self.append_action_list(type = 'Action', name = 'Test_Tap', argument = {'touch_point': 'point', '2nd_touch_point': 'point'}, description= '')
 
 	def Get_Current_Screenshot(self):
 		Img_Screenshot = self.Device.screencap()
@@ -450,9 +452,11 @@ class Automation:
 		self.tess_path = tess_path
 		self.tess_data = tess_data
 		self.tess_lang = tess_lang
-		self.OCR = True	
+		self.OCR = True
+		self.Update_Action_List()
 
 	def Update_Serial_Number(self, Serial):
+		print('Connect to device:', Serial)
 		self.Device = self.Client.device(Serial)
 
 

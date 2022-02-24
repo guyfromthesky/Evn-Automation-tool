@@ -11,7 +11,7 @@ from datetime import datetime
 import configparser
 import random
 import csv
-
+import json
 #GUI
 from tkinter import *
 from tkinter.ttk import *
@@ -249,7 +249,7 @@ class Automation_Execuser(Frame):
 		Label(Tab, text=self.LanguagePack.Label['Serial']).grid(row=Row, column=7, padx=5, pady=5, sticky=W)			
 		self.TextSerial = AutocompleteCombobox(Tab)
 		self.TextSerial.Set_Entry_Width(20)
-		
+		self.TextSerial.bind("<<ComboboxSelected>>", self.ADB_Connect)
 		self.TextSerial.grid(row=Row, column=8, columnspan=2,padx=5, pady=5, sticky=W+E)
 		self.TextSerial.set_completion_list([])
 		Button(Tab, width = self.Button_Width_Half, text=  "Get Device", command= self.Get_Serial).grid(row=Row, column=10,padx=5, pady=0, sticky=W)
@@ -270,7 +270,8 @@ class Automation_Execuser(Frame):
 		self.option_working_language = AutocompleteCombobox(Tab)
 		self.option_working_language.Set_Entry_Width(20)
 		self.option_working_language.grid(row=Row, column=3, padx=5, pady=5, sticky=W)
-
+		Button(Tab, width = self.Button_Width_Half, text=  "Refresh", command= self.Btn_OCR_Update_Working_Language).grid(row=Row, column=4, columnspan=2, padx=5, pady=0)	
+		
 		Label(Tab, text= "Device IP").grid(row=Row, column=7, padx=5, pady=5, sticky=W)	
 		self.Device_IP = Text(Tab, width=30, height=1, undo=True, wrap=WORD)
 		self.Device_IP.grid(row=Row, column=8, columnspan=2, padx=5, pady=5, sticky=E)
@@ -505,9 +506,12 @@ class Automation_Execuser(Frame):
 			
 			self.TextSerial.set_completion_list(Serrial)
 			self.TextSerial.current(0)
+			self.AutoTester.Update_Serial_Number(Serrial[0])
 		except:	
 			pass
-
+	def ADB_Connect(self, event):
+		self.AutoTester.Update_Serial_Number(self.TextSerial.get())
+		
 	def Connect_Device(self):
 		IP = self.Device_IP.get("1.0", END).replace('\n', '')
 		os.popen( ADBPATH + ' tcpip 5555')
@@ -781,24 +785,7 @@ class Automation_Execuser(Frame):
 		except:
 			pass	
 
-	def Update_Action_Name(self, event=None):
-		menu = self.action_name["menu"]
-		menu.delete(0, 'end')
-		this_type = self.current_action_type.get()
-		action_list = []
-		if this_type != '':
-			temp_action_list = self.action_dict[this_type]
-			for action in temp_action_list:
-				action_list.append(action)
-		
-		action_list.sort()
-		
-		for value in action_list:
-			menu.add_command(label=value, command=lambda _value=value: [lambda v=_value: self.current_action_name.set(_value), self.Update_Action_Arg(_value)])
-		if len(action_list)> 0:
-			self.current_action_name.set(action_list[0])
-		else:	
-			self.current_action_name.set("")	
+	
 
 	def Update_Action_Arg(self, action_name=None):
 		this_type = self.current_action_type.get()
@@ -841,6 +828,7 @@ class Automation_Execuser(Frame):
 				arg_data['variable_type'] = None
 				arg_data['value_variable'] = None
 				arg_data['widget'] = None
+				arg_data['button'] = None
 
 				Label(child_windows, text= arg, anchor=S, justify=LEFT).grid(row=row,column=1, padx=10, pady=10, sticky=S)
 				#value_array[row] = StringVar()
@@ -870,14 +858,66 @@ class Automation_Execuser(Frame):
 					self.ExecuteList.Set_Entry_Width(30)
 					arg_data['widget'].grid(row=row,column=2, padx=10, pady=10, sticky=S)
 				elif arg_data['variable_type'] == 'point':
-					Label(child_windows, text= 'WIP').grid(row=row,column=2, padx=10, pady=10, sticky=S)
-				elif arg_data['variable_type'] == 'area':
-					Label(child_windows, text= 'WIP').grid(row=row,column=2, padx=10, pady=10, sticky=S)
+					arg_data['widget'] = Text(child_windows, height = 1, width=30)
+					arg_data['widget'].grid(row=row,column=2, padx=10, pady=10, sticky=S)
+					if self.AutoTester.Device != None:
+						btn_status = NORMAL
+					else:
+						btn_status = DISABLED
+					arg_data['button'] = Button(child_windows, text = 'Select', command = lambda val=arg_data['widget']: self.Btn_Select_Point(val), state=btn_status)
+					arg_data['button'].grid(row=row,column=3, padx=10, pady=10, sticky=E)
 
+				elif arg_data['variable_type'] == 'area':
+					arg_data['widget'] = Text(child_windows, height = 1, width=30)
+					arg_data['widget'].grid(row=row,column=2, padx=10, pady=10, sticky=S)
+					if self.AutoTester.Device != None:
+						btn_status = NORMAL
+					else:
+						btn_status = DISABLED
+					arg_data['button'] = Button(child_windows, text = 'Select', command = lambda val=arg_data['widget']: self.Btn_Select_Area(val), state=btn_status)
+					arg_data['button'].grid(row=row,column=3, padx=10, pady=10, sticky=E)
 				arg_data_list.append(arg_data)
 				row +=1
 		child_windows.protocol("WM_DELETE_WINDOW", lambda c=child_windows,i=treeview_index, a=arg_data_list: self.Get_Input_Value_On_Closing(c,a,i))		
 		Button(child_windows, text = 'Set value', command = lambda c=child_windows,i=treeview_index, a=arg_data_list: self.Get_Input_Value_On_Closing(c,a,i)).grid(row=row,column=2, padx=10, pady=10, sticky=E)
+
+	def Btn_Select_Area(self, text_widget):
+		im = self.AutoTester.Get_Current_Screenshot()
+		image = cv2.imdecode(np.frombuffer(im, np.uint8), cv2.IMREAD_COLOR)
+		location = cv2.selectROI("Sekect scan area", image, showCrosshair=False,fromCenter=False)
+		area = {}
+		area['x'] = location[0]
+		area['y'] = location[1]
+		area['w'] = location[2]
+		area['h'] = location[3]
+		cv2.destroyAllWindows()
+		text_widget.insert("end", json.dumps(area))
+
+	def Btn_Select_Point(self, text_widget):
+		self.temp_widget = text_widget
+		im = self.AutoTester.Get_Current_Screenshot()
+		image = cv2.imdecode(np.frombuffer(im, np.uint8), cv2.IMREAD_COLOR)
+		cv2.imshow('Screen', image)
+		cv2.setMouseCallback('Screen', self.click_event)
+		cv2.waitKey(0)
+		cv2.destroyAllWindows()
+		self.temp_widget = None
+
+
+	def click_event(self, event, x, y, flags, params):
+		
+		if self.temp_widget != None:
+			# checking for left mouse clicks
+			if event == cv2.EVENT_LBUTTONDOWN:
+				# displaying the coordinates
+				# on the Shell
+				self.temp_widget.delete('1.0', END)	
+				point = {}
+				point['x'] = x
+				point['y'] = y
+				cv2.destroyAllWindows()
+				self.temp_widget.insert("end", json.dumps(point)) 
+
 
 	def Get_Input_Value_On_Closing(self,child_windows, arg_data_list, treeview_index):
 		this_type = self.current_action_type.get()
@@ -925,19 +965,37 @@ class Automation_Execuser(Frame):
 		# close the window
 		cv2.destroyAllWindows()
 
-	def click_event(self, event, x, y, flags, params):
-
-		return 0,0
-
 	# Other function
 	
 	def Update_Action_List(self):
 		print('Update action list to drop list')
+		action_type = ['Action', 'Loop', 'Condition', 'Get_Result', 'Update_Variable']
+		action_type.sort()
+		self.action_dict = {}
+		for type in action_type:
+			self.action_dict[type] = {}
 		for action in self.AutoTester.action_list:
-			print(action)
-		return
-
-
+			if action['type'] in action_type:
+				self.action_dict[action['type']][action['name']] = action['arg']
+			
+	def Update_Action_Name(self, event=None):
+		menu = self.action_name["menu"]
+		menu.delete(0, 'end')
+		this_type = self.current_action_type.get()
+		action_list = []
+		if this_type != '':
+			temp_action_list = self.action_dict[this_type]
+			for action in temp_action_list:
+				action_list.append(action)
+		
+		action_list.sort()
+		
+		for value in action_list:
+			menu.add_command(label=value, command=lambda _value=value: [lambda v=_value: self.current_action_name.set(_value), self.Update_Action_Arg(_value)])
+		if len(action_list)> 0:
+			self.current_action_name.set(action_list[0])
+		else:	
+			self.current_action_name.set("")	
 
 	def ImportTestCase(self, Test_Case_File_Path):
 		print('Loading My Dictionary')
@@ -1087,28 +1145,13 @@ class Automation_Execuser(Frame):
 		_working_language = self.Configuration['AUTO_TOOL']['scan_lang']
 		self.option_working_language.set(_working_language)
 
-		#self.action_name.set_completion_list([''])
-		action_type = ['Action', 'Loop', 'Condition', 'Get_Result', 'Update_Variable']
-		action_type.sort()
-
-		self.action_dict = {}
-
-		for type in action_type:
-			self.action_dict[type] = {}
-
-		for action in self.AutoTester.action_list:
-			
-			if action['type'] in action_type:
-				this_action = {action['name']: action['arg']}
-				self.action_dict[action['type']][action['name']] = action['arg']
-		self.Update_Action_Name()	
-		
 		self.AutoTester.Update_DB_Path(self.DB_Path)
 
 		if self.TesseractPath != None and self.TesseractDataPath != None and _working_language != None:
+			print('Enable OCR')
 			self.AutoTester.Update_Tesseract(self.TesseractPath, self.TesseractDataPath, _working_language)
 
-
+		self.Update_Action_List()
 	
 	def Btn_Select_Font_Colour(self):
 		colorStr, self.Font_Color = colorchooser.askcolor(parent=self, title='Select Colour')
