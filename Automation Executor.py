@@ -1243,9 +1243,27 @@ class Automation_Execuser(Frame):
 
 					writer.writerow({'Type': values[0], 'Action': values[1], 'Arg1': values[2], 'Arg2': values[3], 'Arg3': values[4], 'Arg4': values[5], 'Arg5': values[6], 'Arg6': values[7]})
 
+	def Create_Test_Object_List(self):
+		Test_Obect_List = []
+		for row in self.Treeview.get_children():
+			_test_object = {}
+			child = self.Treeview.item(row)
+			_action_type = child['values'][0]
+			_test_object['Type'] = _action_type
+			_action_name = child['values'][1]
+			_test_object['Name'] = _action_name
+			if _action_name in ['End Loop', 'End If']:
+				_action_name = _action_name.replace('End ', '')
+			_arg_info = self.action_dict[_action_type][_action_name]
+			print('Arg info:', _arg_info)
+			_arg = child['values'][2:]
+			print('Arg data:', _arg)
+			print('_test_object', _test_object)		
+		return Test_Obect_List
+
 	def Btn_Execute_Script(self):
 	
-		self.Btn_Generate_TestCase()
+		#self.Btn_Generate_TestCase()
 
 		DB_Path = self.Text_DB_Path.get()
 		Execute_Value = self.ExecuteList.get().replace('\n','')
@@ -1259,7 +1277,7 @@ class Automation_Execuser(Frame):
 		
 		Test_Case_Path = self.Str_Test_Case_Path.get()
 		if Test_Case_Path == "":
-			Result_Folder_Path == CWD + '\\Result' + '_' + 'General_Test_Case' + '_' + Function_Get_TimeStamp()
+			Result_Folder_Path = CWD + '\\Result' + '_' + 'General_Test_Case' + '_' + Function_Get_TimeStamp()
 		else:
 			Dir, Name, Ext = Split_Path(Test_Case_Path)
 			Result_Folder_Path = Dir + '\\Result' + '_' + Name + '_' + Function_Get_TimeStamp()
@@ -1274,20 +1292,19 @@ class Automation_Execuser(Frame):
 		if len(test_object) < 1:
 			messagebox.showinfo('Error...', 'Please add atleast 1 action before running the application')
 			return
-		self.Automation_Processor = Process(	target = Function_Execute_Script,
-											kwargs= {	'Status_Queue' : self.Status_Queue, 
-														'Result_Queue' : self.Result_Queue, 
-														'AutoTester' : self.AutoTester, 
-														'DB_Path' : DB_Path, 
-														'Test_Case_Path' : Test_Case_Path, 
-														'Result_Folder_Path' : Result_Folder_Path,
-														'TestCaseObject' : test_object,
-														'Execute_Value' : Execute_Value, 
-													},
-										)
-		
-		#Status_Queue, Result_Queue, Serial_Nummber, DB_Path, Test_Case_Path, TestCaseObject = []
-		#self.Data_Compare_Process = Process(target=Old_Function_Compare_Excel, args=(self.Status_Queue, self.Process_Queue, Old_File, New_File, Output_Result, Sheet_Name, Index_Col, self.Background_Color, self.Font_Color,))
+
+		self.Create_Test_Object_List()
+		_kwargs= {	'Status_Queue' : self.Status_Queue, 
+					'Result_Queue' : self.Result_Queue, 
+					'AutoTester' : self.AutoTester, 
+					'DB_Path' : DB_Path, 
+					'Test_Case_Path' : Test_Case_Path, 
+					'Result_Folder_Path' : Result_Folder_Path,
+					'TestCaseObject' : test_object,
+					'Execute_Value' : Execute_Value, 
+				}
+		print('_kwargs', _kwargs)		
+		self.Automation_Processor = Process(target = Function_Execute_Script, kwargs= _kwargs,)
 		self.Automation_Processor.start()
 		self.after(DELAY1, self.Wait_For_Automation_Processor)	
 
@@ -1368,7 +1385,7 @@ def Function_Execute_Script(
 ):
 	print("All variable:", locals())
 	Status_Queue.put("Importing test case config")
-
+	Start = time.time()
 	#os.system( ADBPATH + ' forward tcp:9889 tcp:9889')
 
 	Connect_Status = AutoTester.Check_Connectivity()
@@ -1383,7 +1400,8 @@ def Function_Execute_Script(
 		# Generate Testcase from TestCaseObject	
 		print("WIP")
 	# Update TestCaseObject structure:
-	TestCase = TestCaseObject['Testcase']
+	'''
+	estCase = TestCaseObject['Testcase']
 	TestInfo = TestCaseObject['Info']
 	for detail in TestInfo:
 		Status_Queue.put( detail +': '+ str(TestInfo[detail]))
@@ -1423,6 +1441,8 @@ def Function_Execute_Script(
 		Status_Queue.put('Test is completed')
 	else:
 		Status_Queue.put('Fail to execute the test')	
+	
+	'''
 	
 	End = time.time()
 	Status_Queue.put('Total testing time: ' + str(int(End-Start)) + " seconds.")	

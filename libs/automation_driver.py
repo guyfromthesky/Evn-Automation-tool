@@ -76,123 +76,61 @@ class Automation:
 		self.action_list.append(_action)
 		return _action
 
-	def Function_Import_TestCase(self, TestCase_Path):
+	def Function_Import_TestCase(self, TestCase_Object):
+		
+		to_eval_list = []
+		preflix = 'Controller' + '.'	
+		# TestCase_Object = List object
+		for _index in range(0, TestCase_Object):
+			Step = TestCase_Object[_index]
+			Result = None
+			Stepname = preflix + Step['Name']
+			if Step['Name'] == "Action":
+				print('Action step')
 
-		if TestCase_Path != None:
-			if (os.path.isfile(TestCase_Path)):
-				xlsx = load_workbook(TestCase_Path, data_only=True)
-				Testcase = {}
+				Arg = Step['Argument']
+				TempArg = []
+				for temp_arg in Arg:
+					TempArg.append('\"' + str(temp_arg) + '\"')
 
-				for sheet in xlsx:
-					
-					sheetname = sheet.title.lower()
-					if sheetname  == 'testcase':
-						FirstInfoRow = None
-						EndInfoRow = None
+				TempArg = str(','.join(TempArg))
+				if len(Arg) > 0:
+					toEval = Stepname + '(' + str(TempArg) + ')'
+				else:
+					toEval = Stepname + '()'	
+				to_eval_list.append(toEval)
 
-						FirstTestCaseRow = None
-						EndTestCaseRow = None
+			elif Step['Name'] == "Condition":
+				print('Condition step')
 
-						ws = xlsx[sheet.title]
+			elif Step['Name'] == "Get_Result":
+				print('Get Result step')
+			
+			elif Step['Name'] == "Update_Variable":
+				print('Update Variable step')		
 
-						Testcase['Info'] = {}
-						Testcase['Testcase'] = []
-						database = None
-						ListCol = {}
-
-						Loop = False
-						LoopStep = []
-
-						#Get Col Label and Letter
-						for col in ws.iter_cols(min_row=1, max_col=1):
-							for cell in col:
-								Value = cell.value
-								if Value != None:
-									Value = Value.lower()
-									CurrentRow = cell.row
-									
-									if Value == 'info':
-										if FirstInfoRow == None:
-											FirstInfoRow = CurrentRow
-										if EndInfoRow == None or EndInfoRow < CurrentRow:
-											EndInfoRow = CurrentRow
-										if CurrentRow > FirstInfoRow:
-											Par = ws['B' + str(CurrentRow)].value
-											Val = ws['C' + str(CurrentRow)].value
-											Testcase['Info'][Par] = Val
-										
-
-									if Value == 'test case':
-										if FirstTestCaseRow == None:
-											FirstTestCaseRow = CurrentRow
-										if EndTestCaseRow == None or EndTestCaseRow < CurrentRow:
-											EndTestCaseRow = CurrentRow
-										
-										
-										if CurrentRow > FirstTestCaseRow:
-											Step = {}
-											Function = ws['C' + str(CurrentRow)].value	
-											Step['Name'] = Function
-											Step['Argument'] = []
-											lastChar = "D"
-											while True:		
-												try:
-													Val = ws[lastChar + str(CurrentRow)].value
-													if Val != None:
-														Step['Argument'].append(Val)
-														lastChar = chr(ord(lastChar) + 1)
-													else:
-														break
-												except:
-													break
-											
-											Type = ws['B' + str(CurrentRow)].value
-											#print('Type', Type)
-											if Type.find('Loop') > -1:
-												LoopStep.append(Step)
-												#print('Add loop step', Step)
-											else:
-
-												if len(LoopStep) > 0:
-													#LoopStep.append(Step)
-													LoopSteps = {}
-													LoopSteps['Name'] = 'Loop'
-													Type = ws['B' + str(CurrentRow-1)].value
-													Type = Type.replace('Loop(',"")
-													Type = Type.replace(')',"")
-
-													LoopSteps['Amount'] = int(Type)
-													LoopSteps['Step'] = LoopStep
-													
-													Testcase['Testcase'].append(LoopSteps)
-													Testcase['Testcase'].append(Step)
-													LoopStep = []
-													#print('Update loop step', LoopSteps)
-												else:
-													Testcase['Testcase'].append(Step)
-													#print('Add normal step: ', Step)
-
-											CurrentRow +=1
-											
-							if len(LoopStep) > 0:
-								LoopSteps = {}
-								LoopSteps['Name'] = 'Loop'
-								Type = ws['B' + str(CurrentRow-1)].value
-								Type = Type.replace('Loop(',"")
-								Type = Type.replace(')',"")
-
-								LoopSteps['Amount'] = int(Type)
-								LoopSteps['Step'] = LoopStep
-								
-								Testcase['Testcase'].append(LoopSteps)
-
-				if 'Type' not in Testcase['Info']:
-					Testcase['Info']['Type'] = 'General'
-				return Testcase
 			else:
-				return({})	
-		else:
-			return({})
+				#Loop
+				_loop_amount = 1
+				if Step['Action'] == 'Loop':
+					# Normal loop
+					_loop_amount = Step['Arg'][0]
+				_loop_steps = []	
+				for i in range(0, _loop_amount):
+					_temp_loop_steps = []
+					while True:
+						_temp_index += 1
+						LoopStep = TestCase_Object[_temp_index]
+						LStepname = preflix + LoopStep['Name']
+						#LArg = NewStep['Argument']
+						Arg = LoopStep['Argument']
+						TempArg = []
+						#for temp_arg in LArg:
+						for temp_arg in Arg:
+							TempArg.append('\"' + str(temp_arg) + '\"')
+						TempArg = str(','.join(TempArg))	
+						toEval = LStepname + '(' + TempArg + ')'
+						_temp_loop_steps.append(toEval)
 
 
 	def Function_Import_DB(self):
@@ -611,7 +549,7 @@ class Automation:
 		Img_Screenshot = cv2.imdecode(Img_Screenshot, cv2.IMREAD_COLOR)
 		#Img_Screenshot = cv2.cvtColor(Img_Screenshot, cv2.COLOR_GRAY2BGR)
 		try:
-			Img_Screenshot = _resize(Img_Screenshot, 50)
+			Img_Screenshot = resize(Img_Screenshot, 50)
 		except:
 			print('Fail to Resize')
 		

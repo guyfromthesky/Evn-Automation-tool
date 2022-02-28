@@ -406,7 +406,7 @@ def save_image(Img, Name):
 
 ################################################################################################################
 
-def _resize(Img, scale_percent):
+def resize(Img, scale_percent):
 
 	width = int(Img.shape[1] * scale_percent)
 	height = int(Img.shape[0] * scale_percent)
@@ -503,7 +503,7 @@ def Get_Item(Img_Screenshot, Img_Template, Match_Rate=0.50):
 	
 	ratio = 1080 / source_H
 	if ratio != 1:
-		Img_Screenshot = _resize(Img_Screenshot, ratio)
+		Img_Screenshot = resize(Img_Screenshot, ratio)
 
 	template = cv2.cvtColor(Img_Template, cv2.COLOR_BGR2GRAY)
 	(tH, tW) = template.shape[:2]
@@ -537,7 +537,7 @@ def Get_Item(Img_Screenshot, Img_Template, Match_Rate=0.50):
 
 def Count_Object(Img_Screenshot, Img_Template, Match_Rate=0.50):
 
-	Img_Template = _resize(Img_Template, 50)
+	Img_Template = resize(Img_Template, 50)
 	#Img_Template = cv2.bitwise_not(Img_Template)
 
 	template = cv2.cvtColor(Img_Template, cv2.COLOR_BGR2GRAY)
