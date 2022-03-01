@@ -158,8 +158,8 @@ class Automation_Execuser(Frame):
 			print('Error:', e)
 		'''
 		
-		print('Get device serial')
-		self.Get_Serial()
+		#print('Get device serial')
+		#self.Get_Serial()
 		self.after(DELAY2, self.status_listening)
 
 	# UI init
@@ -509,13 +509,16 @@ class Automation_Execuser(Frame):
 			devices = client.devices()
 			Serrial = []
 			for device in devices:
-				Serrial.append(device.serial)
-			
+				if device.serial != '':
+					Serrial.append(device.serial)
+			print('Serrial:', Serrial)
 			self.TextSerial.set_completion_list(Serrial)
-			self.TextSerial.current(0)
+			self.TextSerial.set(Serrial[0])
+			
 			self.AutoTester.Update_Serial_Number(Serrial[0])
 		except:	
 			pass
+
 	def ADB_Connect(self, event):
 		self.AutoTester.Update_Serial_Number(self.TextSerial.get())
 		
@@ -1159,13 +1162,14 @@ class Automation_Execuser(Frame):
 		_working_language = self.Configuration['AUTO_TOOL']['scan_lang']
 		self.option_working_language.set(_working_language)
 
-		self.AutoTester.Update_DB_Path(self.DB_Path)
+		#self.AutoTester.Update_DB_Path(self.DB_Path)
 
 		if self.TesseractPath != None and self.TesseractDataPath != None and _working_language != None:
 			print('Enable OCR')
 			self.AutoTester.Update_Tesseract(self.TesseractPath, self.TesseractDataPath, _working_language)
 
 		self.Update_Action_List()
+		self.Get_Serial()
 	
 	def Btn_Select_Font_Colour(self):
 		colorStr, self.Font_Color = colorchooser.askcolor(parent=self, title='Select Colour')
@@ -1249,16 +1253,30 @@ class Automation_Execuser(Frame):
 			_test_object = {}
 			child = self.Treeview.item(row)
 			_action_type = child['values'][0]
-			_test_object['Type'] = _action_type
+			_test_object['type'] = _action_type
 			_action_name = child['values'][1]
-			_test_object['Name'] = _action_name
+			_test_object['name'] = _action_name
 			if _action_name in ['End Loop', 'End If']:
 				_action_name = _action_name.replace('End ', '')
 			_arg_info = self.action_dict[_action_type][_action_name]
-			print('Arg info:', _arg_info)
-			_arg = child['values'][2:]
-			print('Arg data:', _arg)
-			print('_test_object', _test_object)		
+			_arg = []
+			if _arg_info != None:
+				
+				_index = 2
+				for arg in _arg_info:
+					print('arg', arg)
+					_current_arg = {}
+					if len(child['values']) > _index:
+						_val = child['values'][_index]
+						if _val != '':
+							_current_arg['name'] = arg
+							_current_arg['type'] = _arg_info[arg]
+							_current_arg['value'] = _val
+							_arg.append(_current_arg)
+					_index+=1		
+			_test_object['arg'] = _arg
+			print('_test_object', _test_object)	
+			Test_Obect_List.append(_test_object)	
 		return Test_Obect_List
 
 	def Btn_Execute_Script(self):
@@ -1276,6 +1294,7 @@ class Automation_Execuser(Frame):
 			pass
 		
 		Test_Case_Path = self.Str_Test_Case_Path.get()
+		Name = 'General_Test_Case'
 		if Test_Case_Path == "":
 			Result_Folder_Path = CWD + '\\Result' + '_' + 'General_Test_Case' + '_' + Function_Get_TimeStamp()
 		else:
@@ -1285,25 +1304,22 @@ class Automation_Execuser(Frame):
 		
 		Result_File_Path = Result_Folder_Path + '\\' + Name + '_' + Function_Get_TimeStamp() + Ext
 
-		test_object = []
-		for row in self.Treeview.get_children():
-			child = self.Treeview.item(row)
-			test_object.append(child['values'])
-		if len(test_object) < 1:
-			messagebox.showinfo('Error...', 'Please add atleast 1 action before running the application')
-			return
+		_serial = self.TextSerial.get()
+		Test_Object =  self.Create_Test_Object_List()
 
-		self.Create_Test_Object_List()
+		if len(Test_Object) < 1:
+			messagebox.showinfo('Error...', 'Please add at least 1 action before running the application')
+			return
 		_kwargs= {	'Status_Queue' : self.Status_Queue, 
 					'Result_Queue' : self.Result_Queue, 
-					'AutoTester' : self.AutoTester, 
+					'Serial' : _serial, 
 					'DB_Path' : DB_Path, 
 					'Test_Case_Path' : Test_Case_Path, 
 					'Result_Folder_Path' : Result_Folder_Path,
-					'TestCaseObject' : test_object,
+					'Result_File_Path': Result_File_Path,
+					'TestCaseObject' : Test_Object,
 					'Execute_Value' : Execute_Value, 
-				}
-		print('_kwargs', _kwargs)		
+				}	
 		self.Automation_Processor = Process(target = Function_Execute_Script, kwargs= _kwargs,)
 		self.Automation_Processor.start()
 		self.after(DELAY1, self.Wait_For_Automation_Processor)	
@@ -1381,11 +1397,13 @@ class Automation_Execuser(Frame):
 ###########################################################################################
 
 def Function_Execute_Script(
-		Status_Queue, Result_Queue, AutoTester, DB_Path, Test_Case_Path, Result_Folder_Path,TestCaseObject = [], Execute_Value = None, **kwargs
+		Status_Queue, Result_Queue, Serial, DB_Path, Test_Case_Path, Result_Folder_Path, Result_File_Path, TestCaseObject = [], Execute_Value = None, **kwargs
 ):
-	print("All variable:", locals())
+	#print("All variable:", locals())
 	Status_Queue.put("Importing test case config")
 	Start = time.time()
+	AutoTester = Tester(Status_Queue = Status_Queue, Serial = Serial, DB_Path= DB_Path, Result_Folder_Path= Result_Folder_Path)
+
 	#os.system( ADBPATH + ' forward tcp:9889 tcp:9889')
 
 	Connect_Status = AutoTester.Check_Connectivity()
@@ -1399,6 +1417,8 @@ def Function_Execute_Script(
 	else:
 		# Generate Testcase from TestCaseObject	
 		print("WIP")
+
+	AutoTester.Function_Execute_TestCase(TestCaseObject)	
 	# Update TestCaseObject structure:
 	'''
 	estCase = TestCaseObject['Testcase']

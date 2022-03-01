@@ -50,9 +50,6 @@ class Automation:
 		
 		self.Item_List = []
 		self.Result_Array = []
-		if DB_Path != None:
-			self.DB_Path = self.Get_Folder(DB_Path)
-			self.Function_Import_DB()
 		
 		self.Result_Path = Result_Folder_Path
 
@@ -62,6 +59,9 @@ class Automation:
 		self.tess_data = None
 		self.tess_lang = None
 		self.OCR = False
+
+		if DB_Path != None:
+			self.Function_Import_DB(DB_Path)
 
 		self.Update_Action_List()
 
@@ -76,45 +76,42 @@ class Automation:
 		self.action_list.append(_action)
 		return _action
 
-	def Function_Import_TestCase(self, TestCase_Object):
+	def Function_Execute_TestCase(self, TestCase_Object):
 		
 		to_eval_list = []
 		preflix = 'Controller' + '.'	
 		# TestCase_Object = List object
-		for _index in range(0, TestCase_Object):
-			Step = TestCase_Object[_index]
+		_index = -1
+		for test_object in TestCase_Object:
+			_index+=1
 			Result = None
-			Stepname = preflix + Step['Name']
-			if Step['Name'] == "Action":
+			_test_type = test_object['type']
+			_test_name = test_object['name']
+			_arg_list = test_object['arg']
+			if _test_type == "Action":
 				print('Action step')
+				kwarg = {}
+				function_object = getattr(self, _test_name)
+				if len(_arg_list) > 0:	
+					for _temp_arg in _arg_list:
+						kwarg[_temp_arg['name']] = _temp_arg['value']
+				function_object(**kwarg)
 
-				Arg = Step['Argument']
-				TempArg = []
-				for temp_arg in Arg:
-					TempArg.append('\"' + str(temp_arg) + '\"')
-
-				TempArg = str(','.join(TempArg))
-				if len(Arg) > 0:
-					toEval = Stepname + '(' + str(TempArg) + ')'
-				else:
-					toEval = Stepname + '()'	
-				to_eval_list.append(toEval)
-
-			elif Step['Name'] == "Condition":
+			elif _test_type == "Condition":
 				print('Condition step')
 
-			elif Step['Name'] == "Get_Result":
+			elif _test_type == "Get_Result":
 				print('Get Result step')
 			
-			elif Step['Name'] == "Update_Variable":
+			elif _test_type == "Update_Variable":
 				print('Update Variable step')		
 
 			else:
 				#Loop
 				_loop_amount = 1
-				if Step['Action'] == 'Loop':
+				if _test_type == 'Loop':
 					# Normal loop
-					_loop_amount = Step['Arg'][0]
+					_loop_amount = test_object['arg'][0]
 				_loop_steps = []	
 				for i in range(0, _loop_amount):
 					_temp_loop_steps = []
@@ -133,77 +130,78 @@ class Automation:
 						_temp_loop_steps.append(toEval)
 
 
-	def Function_Import_DB(self):
+	def Function_Import_DB(self, DB_Path):
 		#self.StringID = []	
 		self.UI = {}
-		if self.DB_Path != None:
-			if (os.path.isfile(self.DB_Path)):
-				xlsx = load_workbook(self.DB_Path, data_only=True)
-				for sheet in xlsx:	
-					sheetname = sheet.title			
-					print('Adding DB from: ', sheet)
-					DB_Name = sheetname
-					Col_StringID = ""
-					Col_String_EN = ""
-					Col_String_KR = ""
-					Col_Path = ""
+		db_dir = os.path.dirname(DB_Path)
+		
+		if (os.path.isfile(DB_Path)):
+			xlsx = load_workbook(DB_Path, data_only=True)
+			for sheet in xlsx:	
+				sheetname = sheet.title			
+				print('Adding DB from: ', sheet)
+				DB_Name = sheetname
+				Col_StringID = ""
+				Col_String_EN = ""
+				Col_String_KR = ""
+				Col_Path = ""
 
-					ws = xlsx[sheet.title]
+				ws = xlsx[sheet.title]
 
-					database = None
-					ListCol = {}
+				database = None
+				ListCol = {}
 
-					#Get Col Label and Letter
-					for row in ws.iter_rows():
-						for cell in row:
-							if cell.value == "StringID":
-								Col = cell.column_letter
-								Row_ColID = cell.row
-								Col_StringID = Col
-								ListCol['StringID'] = Col_StringID
+				#Get Col Label and Letter
+				for row in ws.iter_rows():
+					for cell in row:
+						if cell.value == "StringID":
+							Col = cell.column_letter
+							Row_ColID = cell.row
+							Col_StringID = Col
+							ListCol['StringID'] = Col_StringID
 
-							if Col_StringID != "":
-								database = ws
-								lastChar = Col_StringID
-								
-								while True:
-									lastChar = chr(ord(lastChar) + 1)
-									try:
-										ColLabel = database[lastChar + str(Row_ColID)].value
-									except:
-										break	
-									if ColLabel in ["",None] :
-										break
-									else:
-										ListCol[ColLabel] = lastChar
-
-								
-						if database!=  None:
-							break		
-					# Load data 			
-					if database != None:
-						for i in range(Row_ColID, database.max_row): 
-							StringID = database[Col_StringID + str(i+1)].value
-							#self.StringID.append(StringID)
-							MyEntry = {}
-							for Label in ListCol:
-								if Label == 'Path':
-									Path = database[ListCol[Label] + str(i+1)].value
-									try:
-										Path = Correct_Path(Path)
-									except:
-										Path = None	
-									if Path != None:
-										if os.path.isfile(Path):	
-											#MyEntry['Path'] = Path
-											#MyEntry['Image'] = read_img(Path)
-											MyEntry[Label] = database[ListCol[Label] + str(i+1)].value
-
-									
+						if Col_StringID != "":
+							database = ws
+							lastChar = Col_StringID
+							
+							while True:
+								lastChar = chr(ord(lastChar) + 1)
+								try:
+									ColLabel = database[lastChar + str(Row_ColID)].value
+								except:
+									break	
+								if ColLabel in ["",None] :
+									break
 								else:
-									MyEntry[Label] = database[ListCol[Label] + str(i+1)].value
-							if 'Path' in MyEntry:
-								self.UI[StringID] = MyEntry	
+									ListCol[ColLabel] = lastChar
+
+							
+					if database!=  None:
+						break		
+				# Load data 			
+				if database != None:
+					for i in range(Row_ColID, database.max_row): 
+						StringID = database[Col_StringID + str(i+1)].value
+						#self.StringID.append(StringID)
+						MyEntry = {}
+						for Label in ListCol:
+							if Label == 'Path':
+								Path = db_dir + '\\'  + database[ListCol[Label] + str(i+1)].value
+								
+								if Path != None:
+									if os.path.isfile(Path):	
+										#MyEntry['Path'] = Path
+										#MyEntry['Image'] = read_img(Path)
+										MyEntry[Label] = database[ListCol[Label] + str(i+1)].value
+
+								
+							else:
+								MyEntry[Label] = database[ListCol[Label] + str(i+1)].value
+						if 'Path' in MyEntry:
+							self.UI[StringID] = MyEntry	
+
+	def Function_Merge_Path(path, folder):
+		return folder + '\\' + path
 
 	def Function_Import_Data(self, TestCase_Path, Data_ID):
 
@@ -245,98 +243,6 @@ class Automation:
 		else:
 			return([])	
 
-	def Function_Execute_TestCase( self,TestSteps, Controller, TestCase_Path, Result_Path, Test_Type, Status_Queue):
-		
-		preflix = 'Controller' + '.'	
-		ResultComment = []
-		Export_Result = []
-
-
-		for Step in TestSteps:
-			Result = None
-			Stepname = preflix + Step['Name']
-			if Step['Name'] != "Loop":
-				Arg = Step['Argument']
-				TempArg = []
-				for temp_arg in Arg:
-					TempArg.append('\"' + str(temp_arg) + '\"')
-
-				TempArg = str(','.join(TempArg))
-				if len(Arg) > 0:
-					toEval = Stepname + '(' + str(TempArg) + ')'
-				else:
-					toEval = Stepname + '()'	
-				Status_Queue.put(str("Execute function: " + Stepname))
-				Result = eval(toEval)
-				
-				if Result['Type'] == "Execute":
-					TextResult = 'Result' + str(Stepname) + ': ' + str(Result['Type'])
-					Step_Result = {}
-					Step_Result['Name'] = str(Step['Name'])
-					Step_Result['Status'] = Result['Status']
-					if 'Details' in Result:
-						Step_Result['Details'] = Result['Details'] 
-					Export_Result.append(Step_Result)
-					#TestResult = {}
-					#TestResult['Name'] = str(Step['Name'])
-					#ResultArray.append(TestResult)
-
-				elif Result['Type'] == 'Result':
-					TextResult = 'Result' + str(LStepname) + ': ' + str(Result['Type'])
-					TestResult = {}
-					TestResult['Name'] = str(Step['Name'])
-					TestResult['Detail'] = Result['Details']
-					Controller.Update_Result_Array(TestResult)
-
-				ResultComment.append(TextResult)
-
-				#Status_Queue.put(str(TextResult))
-
-			else:
-				Steps = Step['Step']
-				LoopAmount = Step['Amount']
-				for i in range(LoopAmount):
-					for LoopStep in Steps:
-						LStepname = preflix + LoopStep['Name']
-						#LArg = NewStep['Argument']
-						Arg = LoopStep['Argument']
-						TempArg = []
-						#for temp_arg in LArg:
-						for temp_arg in Arg:
-							TempArg.append('\"' + str(temp_arg) + '\"')
-						TempArg = str(','.join(TempArg))	
-						Status_Queue.put(str("Execute function: " + LStepname))
-						toEval = LStepname + '(' + TempArg + ')'
-						Result = eval(toEval)
-						if Result['Type'] == "Execute":
-							TextResult = 'Result ' + str(LStepname) + ': ' + str(Result['Status'])
-							Step_Result = {}
-							Step_Result['Name'] = str(LoopStep['Name'])
-							Step_Result['Status'] = Result['Status']
-							if 'Details' in Result:
-								Step_Result['Details'] = Result['Details'] 
-							Export_Result.append(Step_Result)
-
-						elif Result['Type'] == 'Result':
-							TextResult = 'Result ' + str(LStepname) + ': ' + str(Result['Status'])
-							TestResult = {}
-							TestResult['Name'] = str(LoopStep['Name'])
-							TestResult['Detail'] = Result['Details']
-							Controller.Update_Result_Array(TestResult)
-					
-						ResultComment.append(TextResult)
-						#CurTime = Function_Get_TimeStamp()
-						#ResultLine = CurTime + ': ' + TextResult
-						#Status_Queue.put(str(TextResult))
-			
-			#Dir, Name, Ext = Split_Path(TestCase_Path)
-
-			#Result_Path = 
-		if Test_Type not in ['ListAutoTest', 'ListManualTest']:
-			Print_Result(TestCase_Path, Export_Result, Result_Path)
-			#eval("print(Controller.Result_Array)")
-
-		return True
 
 	def Update_Action_List(self):
 		self.append_action_list(type = 'Action', name = 'Tap_Item', argument = {'string_id': 'string_id', 'total_attemp': 'int'}, description= '')
@@ -345,9 +251,9 @@ class Automation:
 		self.append_action_list(type = 'Action', name = 'Relative_Tap', argument = {'string_id': 'string_id', 'Delta_X': 'int', 'Delta_Y': 'int'}, description= '')
 		self.append_action_list(type = 'Action', name = 'Send_Tab_Key', argument = None, description= '')
 		self.append_action_list(type = 'Get_Result', name = 'Count_Object', argument = {'string_id':'string_id'}, description= '')
-		self.append_action_list(type = 'Update_Variable', name = 'Update_Gacha_Pool', argument = {'db_path':'string', 'db_sheet_name': 'string', 'gacha_pool_sheet':'string'}, description= '')
-		self.append_action_list(type = 'Update_Variable', name = 'Update_Execution_List', argument = {'Execute_List':'string'}, description= '')
-		self.append_action_list(type = 'Update_Variable', name = 'Update_Execution_Value', argument = {'Execute_List':'string'}, description= '')
+		self.append_action_list(type = 'Update_Variable', name = 'Update_Gacha_Pool', argument = {'db_path':'string', 'db_sheet_name': 'string', 'db_sheet_list':'string'}, description= '')
+		self.append_action_list(type = 'Update_Variable', name = 'Update_Execution_List', argument = {'execute_list':'string'}, description= '')
+		self.append_action_list(type = 'Update_Variable', name = 'Update_Execution_Value', argument = {'execute_value':'string'}, description= '')
 		self.append_action_list(type = 'Get_Result', name = 'Analyse_Gacha_Acquired', argument = {'total_item_in_gacha': 'int'}, description= '')
 		self.append_action_list(type = 'Update_Variable', name = 'Analyse_Gacha_Result', argument = {'total_item_in_gacha': 'int'}, description= '')
 		self.append_action_list(type = 'Action', name = 'wait_for_item', argument = {'string_id':'string', 'match_rate': 'float', 'timeout': 'int'}, description= '')
@@ -359,7 +265,7 @@ class Automation:
 		self.append_action_list(type = 'Action', name = 'Input_Current_Value', argument = None, description= '')
 		self.append_action_list(type = 'Action', name = 'Tap_Current_Item', argument = None, description= '')
 		self.append_action_list(type = 'Action', name = 'Wait_For_Current_Item', argument = None, description= '')
-		self.append_action_list(type = 'Action', name = 'Get_Screenshot', argument = None, description= '')
+		self.append_action_list(type = 'Action', name = 'Get_Screenshot', argument = {'name': 'string'}, description= '')
 		#self.append_action_list(type = 'Loop', name = 'List_Loop', argument = {'list_name': 'string'}, description= '')
 		self.append_action_list(type = 'Loop', name = 'Loop', argument = {'amount': 'int'}, description= '')
 		self.append_action_list(type = 'Condition', name = 'If', argument = {'condition': 'string'}, description= '')
@@ -383,8 +289,8 @@ class Automation:
 		self.Result_Path = Path
 
 	def Update_DB_Path(self, Path):
-		self.DB_Path = Path
-		self.Function_Import_DB()
+		#self.DB_Path = Path
+		self.Function_Import_DB(Path)
 
 	def Update_Tesseract(self, tess_path, tess_data, tess_lang):
 		self.tess_path = tess_path
@@ -439,14 +345,16 @@ class Automation:
 		tap(self.Device, touch_point['x'], touch_point['y'])		
 		return self.Generate_Result(Status = True)
 
-	def Tap_Item(self, StringID, total_attemp = 5):
+	def Tap_Item(self, string_id, total_attemp = 5):
 
-		Img_Template = self.UI[StringID]['Image']	
+		Img_Path = self.UI[string_id]['Path']	
+		Img_Template = read_img(Img_Path)
 		for i in range(total_attemp):
 				
 			Img_Screenshot = self.Device.screencap()
 			Img_Screenshot = np.asarray(Img_Screenshot)
 			Img_Screenshot = cv2.imdecode(Img_Screenshot, cv2.IMREAD_COLOR)
+
 			try:
 				result = Get_Item(Img_Screenshot, Img_Template, 0.5)
 			except Exception as e:
@@ -487,8 +395,8 @@ class Automation:
 		
 		return self.Generate_Result(Status = False)
 
-	def Relative_Tap(self, StringID, Delta_X=0, Delta_Y=0):
-		Img_Template = self.UI[StringID]['Image']	
+	def Relative_Tap(self, string_id, Delta_X=0, Delta_Y=0):
+		Img_Template = self.UI[string_id]['Image']	
 
 		Img_Screenshot = self.Device.screencap()
 		Img_Screenshot = np.asarray(Img_Screenshot)
@@ -513,11 +421,11 @@ class Automation:
 	#def Three_Touch(self):
 	#	Three_Touch()
 
-	def Count_Object(self, StringID):
+	def Count_Object(self, string_id):
 		Img_Screenshot = self.Device.screencap()
 		Img_Screenshot = np.asarray(Img_Screenshot)
 		Img_Screenshot = cv2.imdecode(Img_Screenshot, cv2.IMREAD_COLOR)
-		Img_Template = self.UI[StringID]['Image']
+		Img_Template = self.UI[string_id]['Image']
 		ResultStatus, Img = Count_Object(Img_Screenshot, Img_Template)
 		return self.Generate_Result(Status = ResultStatus, Screenshot = Img)
 
@@ -530,17 +438,17 @@ class Automation:
 			return self.Generate_Result(Status = False)
 		return self.Generate_Result(Status = text)
 
-	def Update_Gacha_Pool(self, DB_Path, DB_Sheet, Gacha_Pool):
-		self.Gacha_Pool = Function_Import_DB(DB_Path, [DB_Sheet], Gacha_Pool)
+	def Update_Gacha_Pool(self, db_path, db_sheet_name, db_sheet_list):
+		self.Gacha_Pool = Function_Import_DB(db_path, [db_sheet_name], db_sheet_list)
 		
 		return self.Generate_Result(Status = True)
 
-	def Update_Execution_List(self, Execute_List):
-		self.Execution_List = Execute_List
+	def Update_Execution_List(self, execute_list):
+		self.Execution_List = execute_list
 		return self.Generate_Result(Status = True)
 
-	def Update_Execution_Value(self, Execute_Value):
-		self.Execution_Value = Execute_Value
+	def Update_Execution_Value(self, execute_value):
+		self.Execution_Value = execute_value
 		return self.Generate_Result(Status = True)
 
 	def Analyse_Gacha_Acquired(self, Gacha_Amount = 11):
@@ -688,8 +596,8 @@ class Automation:
 		return self.Generate_Result(Status = ResultStatus)
 		
 
-	def Input_Text(self, Text):
-		send_text(self.Device, Text)
+	def Input_Text(self, input_text):
+		send_text(self.Device, input_text)
 		ResultStatus = True
 
 		
@@ -719,9 +627,9 @@ class Automation:
 		
 		return self.Generate_Result(Status = ResultStatus)
 	
-	def Get_Screenshot(self, Name = 'Screenshot_'):
+	def Get_Screenshot(self, name = 'Screenshot_'):
 		Image = self.Device.screencap()
-		Img_Name = Correct_Path(Name + Function_Get_TimeStamp() + '.png', self.Result_Path)
+		Img_Name = Correct_Path(name + Function_Get_TimeStamp() + '.png', self.Result_Path)
 		ResultStatus = True
 		try:
 			with open(Img_Name, "wb") as fp:
