@@ -5,7 +5,7 @@ import os, sys
 import cv2
 import numpy as np
 import time
-#import imutils
+import json
 
 from libs.general_function import *
 
@@ -29,7 +29,7 @@ from openpyxl import load_workbook
 class Automation:
 	# Serial: Device's serial
 	# DB: Database's Path.
-	def __init__(self, Status_Queue, Serial = None, DB_Path = None, Result_Folder_Path = None):
+	def __init__(self, Status_Queue, Resolution = '720', Language = 'en', Tess_Path = None, Tess_Data = None, Serial = None, DB_Path = None, Result_Folder_Path = None):
 		self.Debugger = Status_Queue
 		
 		self.Client = AdbClient(host="127.0.0.1", port=5037)
@@ -53,12 +53,15 @@ class Automation:
 		
 		self.Result_Path = Result_Folder_Path
 
-		
+		self.tess_path = Tess_Path
+		self.tess_data = Tess_Data
+		self.tess_lang = Language
+		if Tess_Path != None and Tess_Data != None and Language != None:
+			self.OCR = True
+		else:
+			self.OCR = False
 
-		self.tess_path = None
-		self.tess_data = None
-		self.tess_lang = None
-		self.OCR = False
+		self.Resolution = Resolution
 
 		if DB_Path != None:
 			self.Function_Import_DB(DB_Path)
@@ -94,7 +97,19 @@ class Automation:
 				function_object = getattr(self, _test_name)
 				if len(_arg_list) > 0:	
 					for _temp_arg in _arg_list:
-						kwarg[_temp_arg['name']] = _temp_arg['value']
+						_value_type = _temp_arg['type']
+						_raw_value = _temp_arg['value'].replace('\n', '')
+						if _raw_value != '':
+							if _value_type == 'int':
+								_temp_value = int(_raw_value)
+							elif _value_type in ['point', 'area']:
+								_temp_value = json.loads(_raw_value)
+							elif _value_type == 'float':
+								_temp_value = float(_raw_value)	
+							else:
+								# Default value type is string or string_id
+								_temp_value = _raw_value
+							kwarg[_temp_arg['name']] = _temp_value
 				function_object(**kwarg)
 
 			elif _test_type == "Condition":
@@ -119,22 +134,137 @@ class Automation:
 						_temp_index += 1
 						LoopStep = TestCase_Object[_temp_index]
 						LStepname = preflix + LoopStep['Name']
-						#LArg = NewStep['Argument']
+			
 						Arg = LoopStep['Argument']
 						TempArg = []
-						#for temp_arg in LArg:
+				
 						for temp_arg in Arg:
 							TempArg.append('\"' + str(temp_arg) + '\"')
 						TempArg = str(','.join(TempArg))	
 						toEval = LStepname + '(' + TempArg + ')'
 						_temp_loop_steps.append(toEval)
 
+	def Function_Execute_Block(self, Code_Block):
+		_test_type = Code_Block['type']
+		_test_name = Code_Block['name']
+		_arg_list = Code_Block['arg']
+		if _test_type == "Action":
+			print('Action step')
+			kwarg = {}
+			function_object = getattr(self, _test_name)
+			if len(_arg_list) > 0:	
+				for _temp_arg in _arg_list:
+					_value_type = _temp_arg['type']
+					_raw_value = _temp_arg['value'].replace('\n', '')
+					if _raw_value != '':
+						if _value_type == 'int':
+							_temp_value = int(_raw_value)
+						elif _value_type in ['point', 'area']:
+							_temp_value = json.loads(_raw_value)
+						elif _value_type == 'float':
+							_temp_value = float(_raw_value)	
+						else:
+							# Default value type is string or string_id
+							_temp_value = _raw_value
+						kwarg[_temp_arg['name']] = _temp_value
+			result = function_object(**kwarg)
+
+		elif _test_type == "Get_Result":
+			print('Get Result step')
+			result = True
+		
+		elif _test_type == "Update_Variable":
+			print('Update Variable step')
+			result = True		
+
+		else:
+			print('WIP')
+			print('Test type:', _test_type)	
+			result = False
+			
+		return result 
+
+	def Function_Generate_Loop_Block(self, TestCase_Block, _loop_amount, start_index, end_index):
+		
+		block = []
+
+		return block
+
+	def Function_Generate_Condition_Block(self, TestCase_Block, start_index, end_index):
+		
+		block = []
+
+		return block	
+
+
+	def Function_Generate_TestCase(self, TestCase_Object):
+		
+		test_case_list = []
+	
+		# TestCase_Object = List object
+		_index = -1
+		for test_object in TestCase_Object:
+			_index+=1
+			Result = None
+			_test_type = test_object['type']
+			_test_name = test_object['name']
+			_arg_list = test_object['arg']
+			test_case_block = {}
+			if _test_type == "Loop":
+				# Loop number/list
+				if _test_name == 'Loop':
+					_loop_amount = int(_arg_list['amount'])
+				else:
+					# Loop by a list
+					_loop_amount = len(_arg_list['list'])
+				_loop_start_index = _index
+				_loop_end_index = _index
+				while True:
+					_loop_end_index+=1
+					_temp_loop_step = TestCase_Object[_loop_end_index]
+					_temp_test_type = _temp_loop_step['type']
+					_temp_test_name = _temp_loop_step['name']	
+					if _temp_test_type == 'Loop':
+						if _temp_test_name == 'End Loop':
+							_loop_end_index = _loop_end_index
+							break
+					if _loop_end_index == len(TestCase_Object):
+						break
+				
+				Loop_Block = self.Function_Generate_Loop_Block(TestCase_Object, _loop_amount, _loop_start_index, _loop_end_index)	
+				test_case_list.append(Loop_Block)
+
+			elif _test_type == "Condition":
+				_condition_start_index = _index
+
+				_condition_string = test_object['arg']['condition']
+
+				_test_name = test_object['name']
+				_arg_list = test_object['arg']
+				_condition_end_index = _index
+				while True:
+					_condition_end_index +=1
+					_temp_loop_step = TestCase_Object[_condition_end_index]
+					_temp_test_type = _temp_loop_step['type']
+					_temp_test_name = _temp_loop_step['name']	
+					if _temp_test_type == 'Condition':
+						if _temp_test_name == 'End If':
+							break
+					if _condition_end_index == len(TestCase_Object):
+						break
+
+				Loop_Block = self.Function_Generate_Condition_Block(TestCase_Object, _loop_start_index, _loop_end_index)
+				test_case_list.append(Loop_Block)
+
+			else:
+				test_case_list.append(test_object)
+		return test_case_list		
 
 	def Function_Import_DB(self, DB_Path):
 		#self.StringID = []	
 		self.UI = {}
 		db_dir = os.path.dirname(DB_Path)
-		
+		print('Base', db_dir)
 		if (os.path.isfile(DB_Path)):
 			xlsx = load_workbook(DB_Path, data_only=True)
 			for sheet in xlsx:	
@@ -185,14 +315,12 @@ class Automation:
 						#self.StringID.append(StringID)
 						MyEntry = {}
 						for Label in ListCol:
-							if Label == 'Path':
-								Path = db_dir + '\\'  + database[ListCol[Label] + str(i+1)].value
-								
-								if Path != None:
-									if os.path.isfile(Path):	
-										#MyEntry['Path'] = Path
-										#MyEntry['Image'] = read_img(Path)
-										MyEntry[Label] = database[ListCol[Label] + str(i+1)].value
+							if Label == 'Path' :
+								_relative_path = database[ListCol[Label] + str(i+1)].value
+								if _relative_path not in [None, '']:
+									_obsolute_path = db_dir + '\\'  + _relative_path
+									if os.path.isfile(_obsolute_path):	
+										MyEntry[Label] = _obsolute_path
 
 								
 							else:
@@ -268,6 +396,7 @@ class Automation:
 		self.append_action_list(type = 'Action', name = 'Get_Screenshot', argument = {'name': 'string'}, description= '')
 		#self.append_action_list(type = 'Loop', name = 'List_Loop', argument = {'list_name': 'string'}, description= '')
 		self.append_action_list(type = 'Loop', name = 'Loop', argument = {'amount': 'int'}, description= '')
+		self.append_action_list(type = 'Loop', name = 'Loop List', argument = {'list': 'list'}, description= '')
 		self.append_action_list(type = 'Condition', name = 'If', argument = {'condition': 'string'}, description= '')
 		
 		if self.OCR == True:

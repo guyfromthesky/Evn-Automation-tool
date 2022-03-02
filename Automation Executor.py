@@ -180,6 +180,11 @@ class Automation_Execuser(Frame):
 		menubar = Menu(self.parent) 
 		# Adding File Menu and commands 
 		file = Menu(menubar, tearoff = 0)
+		menubar.add_cascade(label =  self.LanguagePack.Menu['File'], menu = file) 
+		file.add_command(label =  'Save TC Template', command = self.Menu_Function_Save_TC_Template) 
+		file.add_command(label =  'Save DB Template', command = self.Menu_Function_Save_DB_Template) 
+		file.add_command(label =  'Save Execute List Template', command = self.Menu_Function_Save_Execute_List_Template) 
+		
 		# Adding Help Menu
 		help_ = Menu(menubar, tearoff = 0) 
 		menubar.add_cascade(label =  self.LanguagePack.Menu['Help'], menu = help_) 
@@ -240,11 +245,13 @@ class Automation_Execuser(Frame):
 		Row += 1
 		Label(Tab, text= 'Execute List').grid(row=Row, column=1, columnspan=2, padx=5, pady=5, sticky=W)
 		self.ExecuteList = AutocompleteCombobox(Tab)
-
 		#self.TestProject = AutocompleteCombobox(Tab)
 		self.ExecuteList.set_completion_list([])
-		self.ExecuteList.Set_Entry_Width(20)
+		self.ExecuteList.Set_Entry_Width(30)
 		self.ExecuteList.grid(row=Row, column=3, padx=5, pady=5, sticky=W)
+		Button(Tab, width = self.Button_Width_Half, text= 'Browse List', command= self.Btn_Browse_Execution_List).grid(row=Row, column=4, columnspan=2, padx=5, pady=0, sticky=W)
+		
+
 
 		Label(Tab, text=self.LanguagePack.Label['Serial']).grid(row=Row, column=7, padx=5, pady=5, sticky=W)			
 		self.TextSerial = AutocompleteCombobox(Tab)
@@ -267,6 +274,13 @@ class Automation_Execuser(Frame):
 
 		Row += 1
 	
+		Label(Tab, text= 'Execute Type').grid(row=Row, column=1, columnspan=2, padx=5, pady=5, sticky=W)
+		self.ExecuteType = AutocompleteCombobox(Tab)
+		#self.TestProject = AutocompleteCombobox(Tab)
+		self.ExecuteType.set_completion_list(['', 'Current Value', 'List'])
+		self.ExecuteType.Set_Entry_Width(30)
+		self.ExecuteType.grid(row=Row, column=3, padx=5, pady=5, sticky=W)
+
 		
 		Label(Tab, text= "Device IP").grid(row=Row, column=7, padx=5, pady=5, sticky=W)	
 		self.Device_IP = Text(Tab, width=30, height=1, undo=True, wrap=WORD)
@@ -277,13 +291,14 @@ class Automation_Execuser(Frame):
 		Row +=1
 		Label(Tab, text= self.LanguagePack.Label['WorkingLang']).grid(row=Row, column=1, columnspan=2, padx=5, pady=5, sticky=W)
 		self.option_working_language = AutocompleteCombobox(Tab)
-		self.option_working_language.Set_Entry_Width(20)
+		self.option_working_language.Set_Entry_Width(30)
+
 		self.option_working_language.grid(row=Row, column=3, padx=5, pady=5, sticky=W)
-		Button(Tab, width = self.Button_Width_Half, text=  "Refresh", command= self.Btn_OCR_Update_Working_Language).grid(row=Row, column=4, columnspan=2, padx=5, pady=0)	
+		Button(Tab, width = self.Button_Width_Half, text=  "Refresh", command= self.Btn_OCR_Update_Working_Language).grid(row=Row, column= 4, columnspan=2, padx=5, pady=0, sticky=W)	
 
 		Label(Tab, text= self.LanguagePack.Label['WorkingRes']).grid(row=Row, column=7, padx=5, pady=0, sticky=W)
-		Radiobutton(Tab, width= 10, text=  '720p', value=1, variable=self.Resolution, command= self.OCR_Setting_Set_Working_Resolution).grid(row=Row, column=8, padx=5, pady=5, sticky=W)
-		Radiobutton(Tab, width= 10, text=  '1080p', value=2, variable=self.Resolution, command= self.OCR_Setting_Set_Working_Resolution).grid(row=Row, column=9, padx=5, pady=5, sticky=W)
+		Radiobutton(Tab, width= 10, text=  '720p', value=1, variable=self.Resolution, command= self.Auto_Setting_Set_Working_Resolution).grid(row=Row, column=8, padx=5, pady=5, sticky=W)
+		Radiobutton(Tab, width= 10, text=  '1080p', value=2, variable=self.Resolution, command= self.Auto_Setting_Set_Working_Resolution).grid(row=Row, column=9, padx=5, pady=5, sticky=W)
 	
 		Row+=1
 		Treeview_Row = 20
@@ -452,7 +467,7 @@ class Automation_Execuser(Frame):
 			self.Write_Debug(self.LanguagePack.ToolTips['SourceDocumentEmpty'])
 		return
 
-	def OCR_Setting_Set_Working_Resolution(self):
+	def Auto_Setting_Set_Working_Resolution(self):
 		_resolution_index = self.Resolution.get()
 		if _resolution_index == 1:
 			self.WorkingResolution = 720
@@ -463,7 +478,7 @@ class Automation_Execuser(Frame):
 
 		self.Write_Debug(self.LanguagePack.ToolTips['SetResolution'] + str(self.WorkingResolution) + 'p')
 
-	def OCR_Setting_Set_Working_Language(self, select_value):
+	def Auto_Setting_Set_Working_Language(self, select_value):
 		
 		self.AppConfig.Save_Config(self.AppConfig.Auto_Tool_Config_Path, 'AUTO_TOOL', 'scan_lang', select_value)
 		
@@ -511,13 +526,16 @@ class Automation_Execuser(Frame):
 			for device in devices:
 				if device.serial != '':
 					Serrial.append(device.serial)
-			print('Serrial:', Serrial)
+			if len(Serrial) == 0:
+				messagebox.showinfo('Error...', 'No device found')	
+				return
 			self.TextSerial.set_completion_list(Serrial)
 			self.TextSerial.set(Serrial[0])
 			
 			self.AutoTester.Update_Serial_Number(Serrial[0])
 		except:	
 			pass
+		
 
 	def ADB_Connect(self, event):
 		self.AutoTester.Update_Serial_Number(self.TextSerial.get())
@@ -947,16 +965,15 @@ class Automation_Execuser(Frame):
 			if arg_data['variable_type'] == None:
 				temp_value = ''
 			elif arg_data['variable_type'] in ['string', 'int']:
-				temp_value = arg_data['widget'].get("1.0", END)
+				temp_value = arg_data['widget'].get("1.0", END).replace('\n', '')
 				
 			elif arg_data['variable_type'] == 'string_id':
-				temp_value = arg_data['widget'].get()
-				
-			elif arg_data['variable_type'] == 'point':
 				temp_value = arg_data['widget'].get("1.0", END)
+			elif arg_data['variable_type'] == 'point':
+				temp_value = arg_data['widget'].get("1.0", END).replace('\n', '')
 				
 			elif arg_data['variable_type'] == 'area':
-				temp_value = arg_data['widget'].get("1.0", END)
+				temp_value = arg_data['widget'].get("1.0", END).replace('\n', '')
 			else:
 				self.input_value.append("")
 			input_value.append(temp_value)
@@ -1087,6 +1104,49 @@ class Automation_Execuser(Frame):
 	def Menu_Function_Open_Main_Guideline(self):
 		#webbrowser.open_new(r"https://confluence.nexon.com/pages/viewpage.action?pageId=298119695")
 		print('Done')
+
+	def Menu_Function_Save_TC_Template(self):
+		filename = filedialog.asksaveasfilename(title = "Select file", filetypes = (("Scan Config", "*.csv"),),)
+		filename = self.CorrectExt(filename, "csv")
+		if filename == "":
+			messagebox.showinfo('Error...', 'Please input file name to create the template.')	
+			return
+		else:
+			with open(filename, 'w', newline='') as csvfile:
+
+				fieldnames = ['Type', 'Action', 'Arg1', 'Arg2', 'Arg3', 'Arg4', 'Arg5', 'Arg6']
+			
+				writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+				writer.writeheader()
+			
+	
+	def Menu_Function_Save_DB_Template(self):
+		filename = filedialog.asksaveasfilename(title = "Select file", filetypes = (("Scan Config", "*.csv"),),)
+		filename = self.CorrectExt(filename, "csv")
+		if filename == "":
+			messagebox.showinfo('Error...', 'Please input file name to create the template.')	
+			return
+		else:
+			with open(filename, 'w', newline='') as csvfile:
+
+				fieldnames = ['StringID', 'String_EN', 'String_KO', 'Path']
+			
+				writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+				writer.writeheader()
+	
+	def Menu_Function_Save_Execute_List_Template(self):
+		filename = filedialog.asksaveasfilename(title = "Select file", filetypes = (("Scan Config", "*.csv"),),)
+		filename = self.CorrectExt(filename, "csv")
+		if filename == "":
+			messagebox.showinfo('Error...', 'Please input file name to create the template.')	
+			return
+		else:
+			with open(filename, 'w', newline='') as csvfile:
+
+				fieldnames = ['name', 'Arg1', 'Arg2', 'Arg3', 'Arg4', 'Arg5', 'Arg6']
+			
+				writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+				writer.writeheader()		
 	
 
 	def ErrorMsg(self, ErrorText):
@@ -1197,7 +1257,7 @@ class Automation_Execuser(Frame):
 		return
 
 	def Btn_Browse_Test_Case_File(self):
-		config_file = filedialog.askopenfilename(initialdir = CWD + "//Testcase", title =  self.LanguagePack.ToolTips['SelectSource'], filetypes = (("Config files", "*.csv *.xlsx"), ), multiple = False)	
+		config_file = filedialog.askopenfilename(initialdir = CWD + "//Testcase", title =  self.LanguagePack.ToolTips['SelectSource'], filetypes = (("Config files", "*.csv"), ), multiple = False)	
 		
 		if os.path.isfile(config_file):
 			self.Str_Test_Case_Path.set(config_file)
@@ -1217,6 +1277,33 @@ class Automation_Execuser(Frame):
 							value = ""
 						values.append(value)	
 					self.Treeview.insert('', 'end', text= '', values=values)
+		else:
+			self.Write_Debug(self.LanguagePack.ToolTips['SourceDocumentEmpty'])
+
+	def Btn_Browse_Execution_List(self):
+			
+		execution_list_file = filedialog.askopenfilename(initialdir = CWD + "//Testcase", title =  self.LanguagePack.ToolTips['SelectSource'], filetypes = (("Config files", "*.csv"), ), multiple = False)	
+		
+		if os.path.isfile(execution_list_file):
+			all_col = ['name', 'Arg1', 'Arg2', 'Arg3', 'Arg4', 'Arg5', 'Arg6']
+			display_list = []
+			with open(execution_list_file, newline='', encoding='utf-8-sig') as csvfile:
+				reader = csv.DictReader(csvfile)
+				for execution_item in reader:
+					values = []
+					for col in all_col:
+						if col in execution_item:
+							if col == 'name':
+								display_list.append(execution_item['name'])
+								continue
+							else:
+								value = str(execution_item[col])
+						else:
+							value = ""
+						values.append(value)	
+		
+			self.ExecuteList.set_completion_list(display_list)
+		
 		else:
 			self.Write_Debug(self.LanguagePack.ToolTips['SourceDocumentEmpty'])
 
@@ -1256,8 +1343,11 @@ class Automation_Execuser(Frame):
 			_test_object['type'] = _action_type
 			_action_name = child['values'][1]
 			_test_object['name'] = _action_name
+			'''
 			if _action_name in ['End Loop', 'End If']:
 				_action_name = _action_name.replace('End ', '')
+			'''
+			
 			_arg_info = self.action_dict[_action_type][_action_name]
 			_arg = []
 			if _arg_info != None:
@@ -1267,7 +1357,7 @@ class Automation_Execuser(Frame):
 					print('arg', arg)
 					_current_arg = {}
 					if len(child['values']) > _index:
-						_val = child['values'][_index]
+						_val = child['values'][_index].replace('\n', '')
 						if _val != '':
 							_current_arg['name'] = arg
 							_current_arg['type'] = _arg_info[arg]
@@ -1300,20 +1390,32 @@ class Automation_Execuser(Frame):
 		else:
 			Dir, Name, Ext = Split_Path(Test_Case_Path)
 			Result_Folder_Path = Dir + '\\Result' + '_' + Name + '_' + Function_Get_TimeStamp()
-		Init_Folder(Result_Folder_Path)
+		
+
+		#Init_Folder(Result_Folder_Path)
 		
 		Result_File_Path = Result_Folder_Path + '\\' + Name + '_' + Function_Get_TimeStamp() + Ext
-
+		
 		_serial = self.TextSerial.get()
 		Test_Object =  self.Create_Test_Object_List()
 
+		_tess_language = self.option_working_language.get()
+		self.Auto_Setting_Set_Working_Language(_tess_language)
+	
+		self.Auto_Setting_Set_Working_Resolution()
+		
 		if len(Test_Object) < 1:
 			messagebox.showinfo('Error...', 'Please add at least 1 action before running the application')
 			return
+	 	
 		_kwargs= {	'Status_Queue' : self.Status_Queue, 
 					'Result_Queue' : self.Result_Queue, 
 					'Serial' : _serial, 
-					'DB_Path' : DB_Path, 
+					'Resolution': self.WorkingResolution,
+					'Language': _tess_language,
+					'Tess_Path' : self.TesseractPath.get(), 
+					'Tess_Data' : self.TesseractDataPath.get(),
+					'DB_Path' : DB_Path,
 					'Test_Case_Path' : Test_Case_Path, 
 					'Result_Folder_Path' : Result_Folder_Path,
 					'Result_File_Path': Result_File_Path,
@@ -1397,19 +1499,22 @@ class Automation_Execuser(Frame):
 ###########################################################################################
 
 def Function_Execute_Script(
-		Status_Queue, Result_Queue, Serial, DB_Path, Test_Case_Path, Result_Folder_Path, Result_File_Path, TestCaseObject = [], Execute_Value = None, **kwargs
+		Status_Queue, Result_Queue, Serial, DB_Path, Tess_Path, Tess_Data, Resolution, Language, Result_Folder_Path, Result_File_Path, TestCaseObject = [], Execute_Value = None, **kwargs
 ):
+	
 	#print("All variable:", locals())
 	Status_Queue.put("Importing test case config")
 	Start = time.time()
-	AutoTester = Tester(Status_Queue = Status_Queue, Serial = Serial, DB_Path= DB_Path, Result_Folder_Path= Result_Folder_Path)
+	#_kwargs = 
+	AutoTester = Tester(Status_Queue = Status_Queue, Serial = Serial, DB_Path= DB_Path, Result_Folder_Path= Result_Folder_Path, Resolution = Resolution, 
+				Language = Language, Tess_Path = Tess_Path, Tess_Data = Tess_Data)
 
 	#os.system( ADBPATH + ' forward tcp:9889 tcp:9889')
 
 	Connect_Status = AutoTester.Check_Connectivity()
 	if Connect_Status == False:
 		Status_Queue.put('Device is not connected.')
-		return
+		#return
 
 	if TestCaseObject == None or TestCaseObject == []:
 		Status_Queue.put('No action is added')
@@ -1417,8 +1522,9 @@ def Function_Execute_Script(
 	else:
 		# Generate Testcase from TestCaseObject	
 		print("WIP")
-
-	AutoTester.Function_Execute_TestCase(TestCaseObject)	
+	result = AutoTester.Function_Generate_TestCase(TestCaseObject)
+	print('Generate testcase:', result)
+	#AutoTester.Function_Execute_TestCase(TestCaseObject)	
 	# Update TestCaseObject structure:
 	'''
 	estCase = TestCaseObject['Testcase']
