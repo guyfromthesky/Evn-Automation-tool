@@ -193,11 +193,18 @@ class Automation:
 	def Function_Generate_Condition_Block(self, TestCase_Block, start_index, end_index):
 		
 		block = []
-
+		_index = -1
+		for test_object in TestCase_Block:
+			_index+=1
+			Result = None
+			_test_type = test_object['type']
+			_test_name = test_object['name']
+			_arg_list = test_object['arg']
+			test_case_block = {}
 		return block	
 
 
-	def Function_Generate_TestCase(self, TestCase_Object):
+	def Function_Generate_TestCase(self, TestCase_Object, start_index = None, end_index = None):
 		
 		test_case_list = []
 	
@@ -205,6 +212,20 @@ class Automation:
 		_index = -1
 		for test_object in TestCase_Object:
 			_index+=1
+			if start_index != None and end_index != None:
+				if _index < start_index:
+					continue
+				if _index > end_index:
+					return test_case_list
+			elif start_index != None:
+				if _index < start_index:
+					continue
+			elif end_index != None:	
+				if _index > end_index:
+					return test_case_list
+			else:
+				pass
+
 			Result = None
 			_test_type = test_object['type']
 			_test_name = test_object['name']
@@ -228,6 +249,10 @@ class Automation:
 						if _temp_test_name == 'End Loop':
 							_loop_end_index = _loop_end_index
 							break
+						elif _temp_test_name == 'Loop':
+							print('Nightmare')
+						else:
+							continue	
 					if _loop_end_index == len(TestCase_Object):
 						break
 				
