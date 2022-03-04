@@ -144,26 +144,11 @@ class Automation:
 						toEval = LStepname + '(' + TempArg + ')'
 						_temp_loop_steps.append(toEval)
 
-	def Function_Execute_Block(self, Block):
-
-		'''
-		{
-			'type': 'condition',
-			'condition_string': condition_string,
-			'execute_block': block,
-			'current_list_value': []
-			'else_block': else_block
-		}
-			
-		'''
-		_block_type = Block['type']
-		_condition_string = Block['condition_string']
-		Code_Block = Block['execute_block']
-		_current_list_value = Block['current_list_value']
-		if len(_current_list_value) >= 0:
-			self.Execution_Value = _current_list_value
-
-		if _block_type == "action":
+	def Function_Execute_Block(self, Code_Block):
+		_test_type = Code_Block['type']
+		_test_name = Code_Block['name']
+		_arg_list = Code_Block['arg']
+		if _test_type == "Action":
 			print('Action step')
 			kwarg = {}
 			function_object = getattr(self, _test_name)
@@ -184,15 +169,42 @@ class Automation:
 						kwarg[_temp_arg['name']] = _temp_value
 			result = function_object(**kwarg)
 
-		elif _block_type == "condition":
+		elif _test_type == "Get_Result":
 			print('Get Result step')
 			result = True
 		
+		elif _test_type == "Update_Variable":
+			print('Update Variable step')
+			result = True		
+
+		else:
+			print('WIP')
+			print('Test type:', _test_type)	
+			result = False
 			
 		return result 
 
+	def Function_Generate_Loop_Block(self, TestCase_Block, _loop_amount, start_index, end_index):
+		
+		block = []
 
-	def Function_Generate_TestCase(self, TestCase_Object, Execution_List, deep_level = 0, start_index = None, end_index = None):
+		return block
+
+	def Function_Generate_Condition_Block(self, TestCase_Block, start_index, end_index):
+		
+		block = []
+		_index = -1
+		for test_object in TestCase_Block:
+			_index+=1
+			Result = None
+			_test_type = test_object['type']
+			_test_name = test_object['name']
+			_arg_list = test_object['arg']
+			test_case_block = {}
+		return block	
+
+
+	def Function_Generate_TestCase(self, TestCase_Object, deep_level = 0, start_index = None, end_index = None):
 		
 		print('Deep level:', deep_level)
 
@@ -233,123 +245,65 @@ class Automation:
 			test_object = TestCase_Object[index]
 
 			_test_type = test_object['type']
-			_test_name = test_object['name']
+			#_test_name = test_object['name']
 			_arg_list = test_object['arg']
 			if _test_type == "Loop":
+				print('Enter a loop', _index)
 				# Loop number/list
-				_test_name = test_object['name']
-				if _test_name == 'Loop':
-					arg == _arg_list[0]
-					_loop_amount = int(arg['value'])
-				
-				
-					if 	_loop_amount >= 0:
-						_loop_block_chain = []	
-						_current_loop_index = _index
-						while True:
-							_current_loop_index+=1
-							if _current_loop_index >= len(TestCase_Object):
-								break
-							_temp_loop_step = TestCase_Object[_current_loop_index]
-							_temp_test_type = _temp_loop_step['type']
-							_temp_test_name = _temp_loop_step['name']	
-							if _temp_test_type == 'Loop':
-								if _temp_test_name == 'End Loop':
-									if deep_level > 0:
-										return test_case_list + _loop_block_chain, _current_loop_index+1
-									break
-									#return _loop_block_chain
-								elif _temp_test_name == 'Loop':
-									# A loop within a loop:
-									deep_level+=1
-									_loop_block, _current_loop_index = self.Function_Generate_TestCase(TestCase_Object, Execution_List, deep_level, _current_loop_index+1)	
-									deep_level-=1
-									_loop_block_chain = _loop_block_chain + _loop_block
-								else:
-									continue	
-							elif _temp_test_type == 'Condition':
-								# Condition within a loop:
-								deep_level+=1
-								_condition_Block,_current_loop_index = self.Function_Generate_TestCase(TestCase_Object, Execution_List, deep_level,  _current_loop_index+1)	
-								deep_level-=1
-								_loop_block_chain = _loop_block_chain + _condition_Block
-							else:
-								_chain = self.chain_warpped('action', _temp_loop_step)
-								_loop_block_chain += _chain
-							
-							#test_case_list += _loop_block_chain
-						for i in range(1, _loop_amount+1):
-							test_case_list += _loop_block_chain
-						_index = _current_loop_index+1
+				for arg in _arg_list:
+					if arg['name'] == 'amount':
+						#Normal loop
+						_loop_amount = int(arg['value'])
+						break
+					elif arg['name'] == 'list':
+						_loop_amount = len(arg['list'])
+						break
 					else:
-						print('Just a blank loop')
-						_index = _current_loop_index
-				
-				elif _test_name == 'Loop List':
-					_loop_start_index = 0
-					_loop_end_index = len(Execution_List)
-					for arg in _arg_list:
-						if arg['name'] == 'start_index':
-							#Normal loop
-							_loop_start_index = int(arg['value'])
-							break
-						elif arg['name'] == 'end_index':
-							if _loop_end_index > int(arg['value']):
-								_loop_end_index = int(arg['value'])
-							break
-						else:
-							continue
-					_loop_amount = _loop_end_index - _loop_start_index + 1
-
-					if 	_loop_amount >= 0:
-						_loop_block_chain = []	
-						_current_loop_index = _index
-						for loop_indexer in range(_loop_start_index, _loop_end_index):
-							_current_execution_value = Execution_List[loop_indexer]
-							while True:
-								_current_loop_index+=1
-								if _current_loop_index >= len(TestCase_Object):
-									break
-								_temp_loop_step = TestCase_Object[_current_loop_index]
-								_temp_test_type = _temp_loop_step['type']
-								_temp_test_name = _temp_loop_step['name']	
-								if _temp_test_type == 'Loop':
-									if _temp_test_name == 'End Loop':
-										if deep_level > 0:
-											return test_case_list + _loop_block_chain, _current_loop_index+1
-										break
-										#return _loop_block_chain
-									elif _temp_test_name == 'Loop':
-										# A loop within a loop:
-										deep_level+=1
-										_loop_block, _current_loop_index = self.Function_Generate_TestCase(TestCase_Object, Execution_List, deep_level, _current_loop_index+1)	
-										deep_level-=1
-										_loop_block_chain = _loop_block_chain + _loop_block
-									else:
-										continue	
-								elif _temp_test_type == 'Condition':
-									# Condition within a loop:
-									deep_level+=1
-									_condition_Block,_current_loop_index = self.Function_Generate_TestCase(TestCase_Object, Execution_List, deep_level,  _current_loop_index+1)	
-									deep_level-=1
-									_loop_block_chain = _loop_block_chain + _condition_Block
-								else:
-									_chain = self.chain_warpped('action', _temp_loop_step, current_list_value= _current_execution_value)
-									_loop_block_chain += _chain
-								
-								test_case_list += _loop_block_chain
-
-							
-						_index = _current_loop_index+1
-					else:
-						print('Just a blank loop')
-						_index = _current_loop_index
-
-
-
+						print('_arg_list', _arg_list) 
+						_loop_amount = 0
+						break	
 				print('Loop amount:', _loop_amount)	
-				
-				
+				if 	_loop_amount >= 0:
+					_loop_block_chain = []	
+					_current_loop_index = _index
+					while True:
+						_current_loop_index+=1
+						if _current_loop_index >= len(TestCase_Object):
+							break
+						_temp_loop_step = TestCase_Object[_current_loop_index]
+						_temp_test_type = _temp_loop_step['type']
+						_temp_test_name = _temp_loop_step['name']	
+						if _temp_test_type == 'Loop':
+							if _temp_test_name == 'End Loop':
+								if deep_level > 0:
+									return test_case_list + _loop_block_chain, _current_loop_index+1
+								break
+								#return _loop_block_chain
+							elif _temp_test_name == 'Loop':
+								# A loop within a loop:
+								deep_level+=1
+								_loop_block, _current_loop_index = self.Function_Generate_TestCase(TestCase_Object, deep_level, _current_loop_index+1)	
+								deep_level-=1
+								_loop_block_chain = _loop_block_chain + _loop_block
+							else:
+								continue	
+						elif _temp_test_type == 'Condition':
+							# Condition within a loop:
+							deep_level+=1
+							_condition_Block,_current_loop_index = self.Function_Generate_TestCase(TestCase_Object, deep_level,  _current_loop_index+1)	
+							deep_level-=1
+							_loop_block_chain = _loop_block_chain + _condition_Block
+						else:
+							_chain = self.chain_warpped('action', _temp_loop_step)
+							_loop_block_chain += _chain
+						
+						#test_case_list += _loop_block_chain
+					for i in range(1, _loop_amount+1):
+						test_case_list += _loop_block_chain
+					_index = _current_loop_index+1
+				else:
+					print('Just a blank loop')
+					_index = _current_loop_index
 
 			elif _test_type == "Condition":
 				print('Enter a condition',_index)
@@ -417,29 +371,27 @@ class Automation:
 				test_case_list += _chain
 		return test_case_list, _index		
 
-	def chain_warpped(self, type, block, current_list_value = [], condition_string = ''):
+	def chain_warpped(self, type, block, condition_string = ''):
 		_type = type.lower()
 		if _type == 'action':
 			'''
 			{
 				'type': 'action',
-				'current_list_value': []
 				'execute_block': test_object,
 			}
 			'''	
-			return [{'type': _type, 'execute_block': block, 'current_list_value': current_list_value}]
+			return [{'type': _type, 'execute_block': block}]
 		else:
 			'''
 			{
 				'type': 'condition',
 				'condition_string': condition_string,
-				'current_list_value': [],
 				'execute_block': block,
 				'else_block': else_block
 			}
 			
 			'''	
-			return [{'type': _type, 'condition_string': condition_string, 'execute_block': block, 'current_list_value': current_list_value}]
+			return [{'type': _type, 'condition_string': condition_string, 'execute_block': block}]
 
 
 	def Function_Import_DB(self, DB_Path):
@@ -572,13 +524,13 @@ class Automation:
 		self.append_action_list(type = 'Action', name = 'Swipe_by_StringID', argument = {'string_id_A': 'string_id', 'string_id_B':'string_id'}	, description= '')
 		self.append_action_list(type = 'Action', name = 'Send_Enter_Key', argument = None, description= '')
 		self.append_action_list(type = 'Action', name = 'Input_Text', argument = {'input_text':'string'}, description= '')
-		self.append_action_list(type = 'Action', name = 'Input_Current_Value', argument = {'Custom_list': 'user_list'}, description= '')
-		self.append_action_list(type = 'Action', name = 'Tap_Current_Item', argument = {'Custom_list': 'user_list'}, description= '')
-		self.append_action_list(type = 'Action', name = 'Wait_For_Current_Item', argument = {'Custom_list': 'user_list'}, description= '')
+		self.append_action_list(type = 'Action', name = 'Input_Current_Value', argument = None, description= '')
+		self.append_action_list(type = 'Action', name = 'Tap_Current_Item', argument = None, description= '')
+		self.append_action_list(type = 'Action', name = 'Wait_For_Current_Item', argument = None, description= '')
 		self.append_action_list(type = 'Action', name = 'Get_Screenshot', argument = {'name': 'string'}, description= '')
 		#self.append_action_list(type = 'Loop', name = 'List_Loop', argument = {'list_name': 'string'}, description= '')
 		self.append_action_list(type = 'Loop', name = 'Loop', argument = {'amount': 'int'}, description= '')
-		self.append_action_list(type = 'Loop', name = 'Loop List', argument = {'start_index': 'int','end_index': 'int'}, description= '')
+		self.append_action_list(type = 'Loop', name = 'Loop List', argument = {'list': 'list'}, description= '')
 		self.append_action_list(type = 'Condition', name = 'If', argument = {'condition': 'string'}, description= '')
 		
 		if self.OCR == True:
@@ -910,27 +862,29 @@ class Automation:
 	def Input_Text(self, input_text):
 		send_text(self.Device, input_text)
 		ResultStatus = True
+
+		
+
 		return self.Generate_Result(Status = ResultStatus)
 
-
-############################################################################
-# FIMCTOPM THAT USE CURRENT LIST VALUE
-############################################################################
-	def Input_Current_Value(self,indexer):
-		_current_item = self.Execution_Value[indexer]
-		send_text(self.Device, _current_item)
+	def Input_Current_Value(self):
+		send_text(self.Device, self.Execution_Value)
 		ResultStatus = True
+
+	
+
 		return self.Generate_Result(Status = ResultStatus)
 
-	def Tap_Current_Item(self,indexer):
-		_current_item = self.Execution_Value[indexer]
-		self.tap_item(_current_item)
+	def Tap_Current_Item(self):
+		self.tap_item(self.Execution_Value)
 		ResultStatus = True
+
+		
+		
 		return self.Generate_Result(Status = ResultStatus)
 
-	def Wait_For_Current_Item(self,indexer):
-		_current_item = self.Execution_Value[indexer]
-		self.wait_for_item(_current_item)	
+	def Wait_For_Current_Item(self):
+		self.wait_for_item(self.Execution_Value)	
 		ResultStatus = True
 
 		

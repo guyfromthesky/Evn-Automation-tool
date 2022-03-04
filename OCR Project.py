@@ -531,8 +531,7 @@ class OCR_Project(Frame):
 		_browse_type = self.Configuration['OCR_TOOL']['browsetype']
 		self.Browse_Type.set(_browse_type)
 
-		_resolution = self.Configuration['OCR_TOOL']['resolution']
-		self.Resolution.set(_resolution)
+		 
 
 		
 	def init_UI_Data(self):
