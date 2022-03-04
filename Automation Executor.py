@@ -1622,6 +1622,8 @@ def Function_Execute_Script(
 	for block in result:
 		index+=1
 		print('Block:', index, str(block))
+	AutoTester.Function_Execute_Block(result)
+		
 	
 	#AutoTester.Function_Execute_TestCase(TestCaseObject)	
 	# Update TestCaseObject structure:

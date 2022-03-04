@@ -156,54 +156,67 @@ class Automation:
 		}
 			
 		'''
-		_block_type = Block['type']
-		_condition_string = Block['condition_string']
-		Code_Block = Block['execute_block']
-		_current_list_value = Block['current_list_value']
-		if len(_current_list_value) >= 0:
-			self.Execution_Value = _current_list_value
-
-		if _block_type == "action":
-			print('Action step')
-			kwarg = {}
-			function_object = getattr(self, _test_name)
-			if len(_arg_list) > 0:	
-				for _temp_arg in _arg_list:
-					_value_type = _temp_arg['type']
-					_raw_value = _temp_arg['value'].replace('\n', '')
-					if _raw_value != '':
-						if _value_type == 'int':
-							_temp_value = int(_raw_value)
-						elif _value_type in ['point', 'area']:
-							_temp_value = json.loads(_raw_value)
-						elif _value_type == 'float':
-							_temp_value = float(_raw_value)	
-						else:
-							# Default value type is string or string_id
-							_temp_value = _raw_value
-						kwarg[_temp_arg['name']] = _temp_value
-			result = function_object(**kwarg)
-
-		elif _block_type == "condition":
-			print('Get Result step')
-			result = True
 		
+		for chain in Block:
+			_block_type = chain['type']
+			Code_Block = chain['execute_block']
+			_current_list_value = chain['current_list_value']
 			
-		return result 
+			if len(_current_list_value) >= 0:
+				self.Execution_Value = _current_list_value
+			else:
+				self.Execution_Value = []
+		
+			if _block_type == "action":
+				
+				kwarg = {}
+				_test_name = Code_Block['name']
+			
+				_arg_list = Code_Block['arg']
+				function_object = getattr(self, _test_name)
+				if len(_arg_list) > 0:	
+					for _temp_arg in _arg_list:
+						_value_type = _temp_arg['type']
+						if _value_type == 'string':
+							_raw_value = _temp_arg['value'].replace('\n', '')
+						else:
+							_raw_value = _temp_arg['value']
+
+						if _raw_value != '':
+							if _value_type == 'int':
+								_temp_value = int(_raw_value)
+							elif _value_type in ['point', 'area']:
+								_temp_value = json.loads(_raw_value)
+							elif _value_type == 'float':
+								_temp_value = float(_raw_value)	
+							else:
+								# Default value type is string or string_id
+								_temp_value = _raw_value
+							kwarg[_temp_arg['name']] = _temp_value
+				result = function_object(**kwarg)
+				print('Execute result:', _test_name,result)
+			elif _block_type == "condition":
+				_condition_string = chain['condition_string']
+				print('Checking condition:', _condition_string)
+				try:
+					_check_condition = eval(_condition_string)
+				except:
+					_check_condition = False
+				if _check_condition == True:
+					self.Function_Execute_Block(Code_Block)
+		
+
 
 
 	def Function_Generate_TestCase(self, TestCase_Object, Execution_List, deep_level = 0, start_index = None, end_index = None):
 		
-		print('Deep level:', deep_level)
 
-		print(end_index)
 		test_case_list = []
 	
 		# TestCase_Object = List object
 		_index = -1
 		for index in range(len(TestCase_Object)):
-			print('index', index, _index)
-			
+		
 			if index < _index:
 				continue
 			else:
@@ -215,17 +228,15 @@ class Automation:
 				if _index < start_index:
 					continue
 				if _index > end_index:
-					print('A: _index > end_index', _index, end_index)
+				
 					return test_case_list, _index
 			elif start_index != None:
 				if _index < start_index:
 					continue
 			elif end_index != None:	
 				if _index > end_index:
-					print('B: _index > end_index', _index, end_index)
 					return test_case_list,_index
 			elif _index == len(TestCase_Object):
-				print('_index == len(TestCase_Object)')
 				return test_case_list,_index
 			else:
 				pass
@@ -239,13 +250,13 @@ class Automation:
 				# Loop number/list
 				_test_name = test_object['name']
 				if _test_name == 'Loop':
-					arg == _arg_list[0]
+					arg = _arg_list[0]
 					_loop_amount = int(arg['value'])
 				
 				
 					if 	_loop_amount >= 0:
 						_loop_block_chain = []	
-						_current_loop_index = _index
+						_current_loop_index = index
 						while True:
 							_current_loop_index+=1
 							if _current_loop_index >= len(TestCase_Object):
@@ -286,26 +297,32 @@ class Automation:
 						_index = _current_loop_index
 				
 				elif _test_name == 'Loop List':
+					print('Loop list')
 					_loop_start_index = 0
 					_loop_end_index = len(Execution_List)
 					for arg in _arg_list:
+						
 						if arg['name'] == 'start_index':
 							#Normal loop
 							_loop_start_index = int(arg['value'])
-							break
+							continue
 						elif arg['name'] == 'end_index':
 							if _loop_end_index > int(arg['value']):
 								_loop_end_index = int(arg['value'])
-							break
-						else:
 							continue
-					_loop_amount = _loop_end_index - _loop_start_index + 1
+						else:
+							print('Invalid arg config')
 
-					if 	_loop_amount >= 0:
+					print('Start:', _loop_start_index, 'End:', _loop_end_index)
+					
+					_loop_amount = _loop_end_index - _loop_start_index + 1
+					print('_loop_amount', _loop_amount)
+					if 	_loop_amount > 0:
 						_loop_block_chain = []	
 						_current_loop_index = _index
-						for loop_indexer in range(_loop_start_index, _loop_end_index):
-							_current_execution_value = Execution_List[loop_indexer]
+						for loop_indexer in range(_loop_start_index, _loop_end_index+1):
+							_current_execution_value = Execution_List[loop_indexer-1]
+							print('Current execute value:', _current_execution_value, loop_indexer, )
 							while True:
 								_current_loop_index+=1
 								if _current_loop_index >= len(TestCase_Object):
@@ -345,14 +362,8 @@ class Automation:
 						print('Just a blank loop')
 						_index = _current_loop_index
 
-
-
-				print('Loop amount:', _loop_amount)	
-				
-				
-
 			elif _test_type == "Condition":
-				print('Enter a condition',_index)
+				print('Enter a condition',index)
 				# Condition type
 				'''
 				{
@@ -372,19 +383,20 @@ class Automation:
 						_condition_string = arg['value']
 						break
 					
-				_current_condition_index = _index
+				_current_condition_index = index
 				while True:
-					
 					_current_condition_index+=1
-					if _current_condition_index >= len(TestCase_Object):
+					print('_current_condition_index', _current_condition_index, len(TestCase_Object))
+					if _current_condition_index > len(TestCase_Object):
 						break
 					_temp_test_object = TestCase_Object[_current_condition_index]
 					_temp_test_type = _temp_test_object['type']
 					_temp_test_name = _temp_test_object['name']	
+					print('_temp_test_object', _temp_test_object)
 					if _temp_test_type == 'Condition':
 						if _temp_test_name == 'End If':
-							_chain = self.chain_warpped('condition', _condition_block_chain)
-							_condition_block_chain += _chain
+							#_chain = self.chain_warpped('condition', _condition_block_chain)
+							#_condition_block_chain += _chain
 							if deep_level > 0:
 								return test_case_list + _condition_block_chain,_current_condition_index+1
 							break
@@ -396,7 +408,7 @@ class Automation:
 							deep_level-=1
 							_condition_block_chain = _condition_block_chain + _condition_block
 						else:
-							continue	
+							print('Invalid type')	
 					elif _temp_test_type == 'Loop':
 						# Loop within a condition:
 						deep_level+=1
@@ -572,9 +584,9 @@ class Automation:
 		self.append_action_list(type = 'Action', name = 'Swipe_by_StringID', argument = {'string_id_A': 'string_id', 'string_id_B':'string_id'}	, description= '')
 		self.append_action_list(type = 'Action', name = 'Send_Enter_Key', argument = None, description= '')
 		self.append_action_list(type = 'Action', name = 'Input_Text', argument = {'input_text':'string'}, description= '')
-		self.append_action_list(type = 'Action', name = 'Input_Current_Value', argument = {'Custom_list': 'user_list'}, description= '')
-		self.append_action_list(type = 'Action', name = 'Tap_Current_Item', argument = {'Custom_list': 'user_list'}, description= '')
-		self.append_action_list(type = 'Action', name = 'Wait_For_Current_Item', argument = {'Custom_list': 'user_list'}, description= '')
+		self.append_action_list(type = 'Action', name = 'Input_Current_Value', argument = {'indexer': 'user_list'}, description= '')
+		self.append_action_list(type = 'Action', name = 'Tap_Current_Item', argument = {'indexer': 'user_list'}, description= '')
+		self.append_action_list(type = 'Action', name = 'Wait_For_Current_Item', argument = {'indexer': 'user_list'}, description= '')
 		self.append_action_list(type = 'Action', name = 'Get_Screenshot', argument = {'name': 'string'}, description= '')
 		#self.append_action_list(type = 'Loop', name = 'List_Loop', argument = {'list_name': 'string'}, description= '')
 		self.append_action_list(type = 'Loop', name = 'Loop', argument = {'amount': 'int'}, description= '')
