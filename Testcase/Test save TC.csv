@@ -2,7 +2,6 @@ Type,Action,Arg1,Arg2,Arg3,Arg4,Arg5,Arg6
 Action,Tap_Item,Fellow_Collection,"
 ",,,,
 Action,Get_Screenshot,,,,,,
-Action,Input_Current_Value,0,,,,,
 Loop,Loop,10,,,,,
 Action,Get_Screenshot,migrate,,,,,
 Action,Input_Text,hello,,,,,

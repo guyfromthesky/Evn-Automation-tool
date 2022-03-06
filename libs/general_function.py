@@ -615,14 +615,14 @@ def intersected(bottom_left1, top_right1, bottom_left2, top_right2):
 ################################################################################################################
 
 def Correct_Path(path, Folder = 'DB'):
-	#print("Folder", Folder)
-	#print('Path', path )
-	if not os.path.isdir(CWD + '//' + Folder):
+	print("Folder", Folder)
+	print('Path', path )
+	if not os.path.isdir(Folder):
 		try:
-			os.mkdir(CWD + '//' + Folder)
+			os.mkdir(Folder)
 		except OSError:
 			return False
-	return CWD + '//' + Folder + '//' + path
+	return Folder + '//' + path
 
 def Init_Folder(FolderPath):
 	if not os.path.isdir(FolderPath):

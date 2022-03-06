@@ -12,10 +12,10 @@ class ConfigLoader:
 	def __init__(self, section_name):
 		self.basePath = os.path.abspath(os.path.dirname(sys.argv[0]))
 		if sys.platform.startswith('win'):
-			self.appdata = os.environ['APPDATA'] + '\\Evan Auto Tool'
+			self.appdata = os.environ['APPDATA'] + '\\AutoTester'
 		else:
-			self.appdata = os.getcwd() + '\\Evan Auto Tool'
-	
+			self.appdata = os.getcwd() + '\\AutoTester'
+		self.CWD = os.path.abspath(os.path.dirname(sys.argv[0]))
 		# Config file
 		self.Auto_Tool_Config_Path = self.appdata + '\\auto_tool.ini'
 
@@ -66,14 +66,12 @@ class ConfigLoader:
 		config = configparser.ConfigParser()
 		config.read(config_path)
 		
-		self.Init_Config_Option(config, self.section_name, 'db_file', '', True)
 		self.Init_Config_Option(config, self.section_name, 'tess_path', '', True)
 		self.Init_Config_Option(config, self.section_name, 'tess_data', '', True)
-		self.Init_Config_Option(config, self.section_name, 'db_path', '', True)
-		self.Init_Config_Option_Numberic(config, self.section_name, 'browsetype', 1)
+		self.Init_Config_Option(config, self.section_name, 'db_path', self.CWD + '\\DB\\db.csv', True)
 		self.Init_Config_Option(config, self.section_name, 'scan_lang', 'eng')
 		self.Init_Config_Option(config, self.section_name, 'app_lang', 'en')
-		self.Init_Config_Option_Numberic(config, self.section_name, 'resolution', 720)
+		self.Init_Config_Option_Numberic(config, self.section_name, 'resolution', 0)
 		self.Init_Config_Option(config, self.section_name, 'scan_type', "Normal")
 		
 
@@ -95,17 +93,31 @@ class ConfigLoader:
 		# Config does not exist
 		if not Section in self.Config:
 			self.Config[Section] = {}
+		if Encoded == True:
+			if isinstance(Default_Value,str):
+				if len(Default_Value) > 0:
+					print('Default_Value', Default_Value)
+					Default_Value =  str(base64.b64encode(Default_Value.encode('utf-8')))
+					print('Default_Value', Default_Value)
+					Default_Value = re.findall(r'b\'(.+?)\'', Default_Value)[0]
+			
 		# Config does not have that section
 		if not Config_Obj.has_section(Section):
+			
 			Config_Obj.add_section(Section)
 			Config_Obj.set(Section, Option, str(Default_Value))
 			self.Config[Section][Option] = Default_Value
 		# Config have that section
 		else:
 			# The section does not have that option
+
 			if not Config_Obj.has_option(Section, Option):
+				
 				Config_Obj.set(Section, Option, str(Default_Value))
-				self.Config[Section][Option] = Default_Value
+				if Encoded == False:
+					self.Config[Section][Option] = Default_Value
+				else:
+					self.Config[Section][Option] = base64.b64decode(Default_Value).decode('utf-8') 	
 			# The section have that option
 			else:
 				Value = Config_Obj[Section][Option]

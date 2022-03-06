@@ -15,6 +15,17 @@ class LanguagePackEN:
 	Menu['Hangul'] = "한글"
 	Menu['English'] = "English"
 
+	Menu['LoadLicensePath'] = "Load license file"
+	Menu['SaveSetting'] = "Save settings"
+
+	Menu['Load'] = "Load"
+	Menu['Save'] = "Save"
+	Menu['CreateTCTemplate'] = "Create TC Template"
+	Menu['CreateDBTemplate'] = "Create DB Template"
+	Menu['CreateExecuteListTemplate'] = "Create Execution List Template"
+
+
+
 	Button = {}
 	Button['Stop'] = "Stop"
 	Button['Translate'] = "Translate"
@@ -55,6 +66,15 @@ class LanguagePackEN:
 	Button['PreviewArea'] = "Preview"
 	Button['SaveConfig'] = "Save Config"
 	Button['Scan'] = "Scan"
+
+	Button['Refresh'] = "Refresh"
+	Button['AddStep'] = "Add Step"
+	Button['AddOnTop'] = "Add Ontop"
+	Button['ClearLog'] = "Clear Log"
+	Button['Pause'] = "Pause"
+	Button['Resume'] = "Resume"
+
+	Button['InputData'] = "Input Data"
 
 	Option = {}
 	Option['TranslateFileName'] = "Translate file name"
@@ -153,7 +173,7 @@ class LanguagePackEN:
 	Label['TestProject'] = "Test project: "
 	Label['TestFeature'] = "Test feature: "
 
-	Label['Serial'] = "Device Serial number: "
+	Label['Serial'] = "Device Serial: "
 
 	Label['LicensePath'] = "License path: "
 
@@ -184,6 +204,13 @@ class LanguagePackEN:
 	Label['DBPath'] = "DB Path:"
 
 	Label['ScanType'] = "Scan type:"
+
+	Label['ExecuteList'] = "Execution List:"
+	Label['ExecuteType'] = "Execution Type:"
+	Label['ActionType'] = "Step Type:"
+	Label['ActionName'] = "Step Name:"
+	Label['ConnectionStatus'] = "Connection Status:"
+
 
 	Tab = {}
 	Tab['Main'] = "Main Menu"
@@ -219,6 +246,10 @@ class LanguagePackEN:
 	Tab['DBUploader'] = "DB Uploader"
 
 	Tab['DBSeacher'] = "Search"
+
+	Tab['Setting'] = "Setting"
+
+	Tab['TestTool'] = "Test Tool"
 
 	ToolTips = {}
 
@@ -294,6 +325,12 @@ class LanguagePackEN:
 	ToolTips['AdvancedScan'] = "Advanced scan: Get components name by compare the image with DB. If the component is not exist in the DB, name of the DB will be get via its text."
 	ToolTips['DBCreate'] = "DB Create: Auto create DB from Image. Name of the components will be get from text."
 
+	ToolTips['TessLangUpdated'] = "OCR supported language list has been updated!"
+	ToolTips['TessLangLoadFail'] = "Fail to load OCR supported language list."
+	ToolTips['TessDataUpdate'] = "Tess Data folder has been updated to: "
+	ToolTips['ExecuteList'] = "Current Data use for the test."
+	ToolTips['ExecuteType'] = "Current value: Perform once for the current value.\nList: Perform once for each data in the list."
+	ToolTips['TessLanguage'] = "Language use for OCR function. The language is end with _ver is the language write in vertical format."
 
 	Notice = {}
 
@@ -316,8 +353,14 @@ class LanguagePackKR:
 	Menu['English'] = "English"
 	
 	Menu['LoadLicensePath'] = "라이센스 파일로드"
-
 	Menu['SaveSetting'] = "설정 저장"
+
+	Menu['Load'] = "로드 TC"
+	Menu['Save'] = "저장 TC"
+	Menu['CreateTCTemplate'] = "TC 템플릿 만들기"
+	Menu['CreateDBTemplate'] = "DB 템플릿 생성"
+	Menu['CreateExecuteListTemplate'] = "실행 목록 템플릿 만들기"
+	
 
 	Button = {}
 	Button['Stop'] = "중지하다"
@@ -356,9 +399,14 @@ class LanguagePackKR:
 	Button['Load'] = "하중"	
 	Button['Save'] = "저장"	
 	Button['GetReport'] = "보고서 받기"	
-
 	Button['UpdateLanguage'] = "언어 가져오기"
 
+	Button['Refresh'] = "페프레쉬"
+	Button['AddStep'] = "단계 추가"
+	Button['AddOnTop'] = "상단에 추가"
+	Button['ClearLog'] = "로그 지우기"
+	Button['Pause'] = "정지시키다"
+	Button['Resume'] = "이력서"
 
 	Option = {}
 	Option['TranslateFileName'] = "파일 이름 변환"
@@ -493,6 +541,12 @@ class LanguagePackKR:
 
 	Label['ScanType'] = "스캔 유형:"
 
+	Label['ExecuteList'] = "실행 목록:"
+	Label['ExecuteType'] = "실행 유형:"
+	Label['ActionType'] = "단계 유형:"
+	Label['ActionName'] = "단계 이름:"
+	Label['ConnectionStatus'] = "장치 연결 상태:"
+
 	Tab = {}
 	Tab['Main'] = "메인 메뉴"
 	Tab['General'] = "일반 설정"
@@ -526,6 +580,10 @@ class LanguagePackKR:
 	Tab['DBUploader'] = "DB 업 로더"
 
 	Tab['DBSeacher'] = "검색"
+
+	Tab['Setting'] = "설정"
+
+	Tab['TestTool'] = "테스트 도구"
 
 	ToolTips = {}
 
@@ -602,5 +660,12 @@ class LanguagePackKR:
 	ToolTips['AdvancedScan'] = "고급 스캔: 이미지와 DB를 비교하여 구성 요소 이름을 가져옵니다. 구성 요소가 DB에 존재하지 않는 경우 DB의 이름은 해당 텍스트를 통해 가져옵니다."
 	
 	ToolTips['DBCreate'] = "DB 생성: Image에서 DB를 자동 생성합니다. 구성 요소의 이름은 텍스트에서 가져옵니다."
+
+	ToolTips['TessLangUpdated'] = "OCR 지원 언어 목록이 업데이트되었습니다!"
+	ToolTips['TessLangLoadFail'] = "OCR 지원 언어 목록을 로드하지 못했습니다."
+	ToolTips['TessDataUpdate'] = "Tess Data 폴더가 다음으로 업데이트되었습니다: "
+	ToolTips['ExecuteList'] = "테스트에 대한 현재 데이터 사용입니다."
+	ToolTips['ExecuteType'] = "현재 값: 현재 값에 대해 한 번 수행합니다.\n목록: 목록의 각 데이터에 대해 한 번 수행합니다."
+	ToolTips['TessLanguage'] = "OCR 기능을 위한 언어 사용. _ver로 끝나는 언어는 세로 형식으로 작성된 언어입니다."
 
 	Notice = {}

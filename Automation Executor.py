@@ -13,14 +13,25 @@ import random
 import csv
 import json
 #GUI
-from tkinter import *
-from tkinter.ttk import *
-from tkinter import filedialog
-from tkinter import messagebox
-from tkinter import ttk
+from tkinter import IntVar, StringVar
+from tkinter import Menu, filedialog, messagebox, Radiobutton
+from tkinter import Text
 from tkinter import colorchooser
 from tkinter import scrolledtext 
-from tkinter import Toplevel 
+from tkinter import Button
+from tkinter import Toplevel , Tk, Frame
+# sticky state
+from tkinter import W, E, S, N, END, X, Y, BOTH, TOP, BOTTOM, CENTER, LEFT, NO
+# Config state
+from tkinter import DISABLED, NORMAL, WORD
+
+
+from tkinter.ttk import Entry, Label, Style, Treeview, Scrollbar
+from tkinter.ttk import Checkbutton, OptionMenu, Notebook
+from xml.dom.expatbuilder import parseFragmentString
+
+
+
 #from tkinter import style
 
 from openpyxl import load_workbook
@@ -34,7 +45,7 @@ from ppadb.client import Client as AdbClient
 
 from libs.configmanager import ConfigLoader
 from libs.version import get_version
-from libs.tkinter_extension import AutocompleteCombobox
+from libs.tkinter_extension import AutocompleteCombobox, AutomationTool_BottomPanel, CreateToolTip
 import cv2
 import pytesseract
 
@@ -47,6 +58,8 @@ VerNum = '0.3.0d'
 version = Tool  + " " +  VerNum
 DELAY1 = 20
 DELAY2 = 100
+DELAY3 = 200
+IDLING_CHECK = 0
 
 #**********************************************************************************
 # UI handle ***********************************************************************
@@ -56,9 +69,10 @@ class Automation_Execuser(Frame):
 	def __init__(self, Root, Queue = None, Manager = None,):
 		
 		Frame.__init__(self, Root) 
+		self.pack(side=TOP, expand=Y, fill=X)
 		#super().__init__()
 		self.parent = Root 
-
+		self.parent.protocol("WM_DELETE_WINDOW", self.on_closing)
 		# Queue
 		self.Process_Queue = Queue['Process_Queue']
 		self.Result_Queue = Queue['Result_Queue']
@@ -95,12 +109,6 @@ class Automation_Execuser(Frame):
 			from libs.languagepack import LanguagePackKR as LanguagePack
 
 		self.LanguagePack = LanguagePack
-
-		# Init function
-
-		self.parent.resizable(False, False)
-		self.parent.title(version)
-		# Creating Menubar 
 		
 		#**************New row#**************#
 		self.Notice = StringVar()
@@ -110,10 +118,11 @@ class Automation_Execuser(Frame):
 		self.AutoTester = Tester(self.Status_Queue)
 
 		#Generate UI
-		self.Generate_Menu_UI()
-		self.Generate_Tab_UI()
+		self.bottom_panel = AutomationTool_BottomPanel(self)
 		self.init_UI()
 		self.init_UI_Data()
+
+		
 		'''
 		try:
 			print('Start server')
@@ -160,11 +169,19 @@ class Automation_Execuser(Frame):
 		
 		#print('Get device serial')
 		#self.Get_Serial()
+		self.parent.bind('<Control-l>', self.Btn_Browse_Test_Case_File)
+		self.parent.bind('<Control-s>', self.Btn_Save_Test_Case_File)  
 		self.after(DELAY2, self.status_listening)
 
 	# UI init
 	def init_UI(self):
-	
+
+		self.parent.resizable(False, False)
+		self.parent.title(version)
+
+		self.Generate_Menu_UI()
+		self.Generate_Tab_UI()
+		
 		self.Generate_Automation_Execution_UI(self.Main)
 		self.Generate_OCR_Setting_UI(self.OCR_SETTING)
 		self.Generate_Debugger_UI(self.Controller)
@@ -181,9 +198,16 @@ class Automation_Execuser(Frame):
 		# Adding File Menu and commands 
 		file = Menu(menubar, tearoff = 0)
 		menubar.add_cascade(label =  self.LanguagePack.Menu['File'], menu = file) 
-		file.add_command(label =  'Save TC Template', command = self.Menu_Function_Save_TC_Template) 
-		file.add_command(label =  'Save DB Template', command = self.Menu_Function_Save_DB_Template) 
-		file.add_command(label =  'Save Execute List Template', command = self.Menu_Function_Save_Execute_List_Template) 
+		
+		file.add_command(label =  self.LanguagePack.Menu['Load'], command = self.Btn_Browse_Test_Case_File) 
+		file.add_command(label =  self.LanguagePack.Menu['Save'], command = self.Btn_Save_Test_Case_File) 
+		file.add_separator()
+		file.add_command(label =  self.LanguagePack.Menu['CreateTCTemplate'], command = self.Menu_Function_Save_TC_Template) 
+		file.add_command(label =  self.LanguagePack.Menu['CreateDBTemplate'], command = self.Menu_Function_Save_DB_Template) 
+		file.add_command(label =  self.LanguagePack.Menu['CreateExecuteListTemplate'], command = self.Menu_Function_Save_Execute_List_Template) 
+		file.add_separator()
+		file.add_command(label =  self.LanguagePack.Menu['Exit'], command = self.on_closing) 
+		
 		
 		# Adding Help Menu
 		help_ = Menu(menubar, tearoff = 0) 
@@ -201,55 +225,46 @@ class Automation_Execuser(Frame):
 		self.parent.config(menu = menubar) 	
 
 	def Generate_Tab_UI(self):
-		self.TAB_CONTROL = ttk.Notebook(self.parent)
-		#Tab
 		
-		self.Main = ttk.Frame(self.TAB_CONTROL)
-		self.TAB_CONTROL.add(self.Main, text= 'Main')
-		
-		self.OCR_SETTING = Frame(self.TAB_CONTROL)
-		self.TAB_CONTROL.add(self.OCR_SETTING, text= 'OCR Setting')
-		#Tab
-		self.Controller = ttk.Frame(self.TAB_CONTROL)
-		self.TAB_CONTROL.add(self.Controller, text= 'Controller')
-		#Tab
-		
+		MainPanel = Frame(self, name='mainpanel')
+		MainPanel.pack(side=TOP, fill=BOTH, expand=Y)
+		TAB_CONTROL = Notebook(MainPanel, name='notebook')
+		TAB_CONTROL.enable_traversal()
 
-		'''
-		self.FolderComparison = ttk.Frame(self.TAB_CONTROL)
-		self.TAB_CONTROL.add(self.FolderComparison, text= self.LanguagePack.Tab['FolderComparison'])
-		#Tab
-		self.Optimizer = ttk.Frame(self.TAB_CONTROL)
-		self.TAB_CONTROL.add(self.Optimizer, text= self.LanguagePack.Tab['Optimizer'])
-		'''
-		#Tab
-		#self.Process = ttk.Frame(self.TAB_CONTROL)
-		#self.TAB_CONTROL.add(self.Process, text= self.LanguagePack.Tab['Debug'])
+		self.Main = Frame(TAB_CONTROL)
+		TAB_CONTROL.add(self.Main, text= self.LanguagePack.Tab['Main'])
 		
+		self.OCR_SETTING = Frame(TAB_CONTROL)
+		TAB_CONTROL.add(self.OCR_SETTING, text= self.LanguagePack.Tab['Setting'])
+		#Tab
+		self.Controller = Frame(TAB_CONTROL)
+		TAB_CONTROL.add(self.Controller, text= self.LanguagePack.Tab['TestTool'])
+	
+		TAB_CONTROL.pack(side=TOP, fill=BOTH, expand=Y)
 
-		self.TAB_CONTROL.pack(expand=1, fill="both")
-		return
+		#self.TAB_CONTROL.pack(expand=1, fill="both")
+		
 
 	def Generate_Automation_Execution_UI(self, Tab):
-		
 		Row = 1
-
 		#self.Str_Test_Case_Path.set( CWD + '\\Testcase\\Sample_Automation_Testcase.xlsx')
-		Label(Tab, text=  self.LanguagePack.Label['TestCaseList']).grid(row=Row, column=1, columnspan=2, padx=5, pady=5, sticky= W)
-		self.Entry_New_File_Path = Entry(Tab,width = 80, state="readonly", textvariable=self.Str_Test_Case_Path)
-		self.Entry_New_File_Path.grid(row=Row, column=3, columnspan=7, padx=4, pady=5, sticky=W+E)
-		Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['Browse'], command= self.Btn_Browse_Test_Case_File).grid(row=Row, column=10, padx=5, pady=0, sticky=W)
+		#Label(Tab, text=  self.LanguagePack.Label['TestCaseList']).grid(row=Row, column=1, columnspan=2, padx=5, pady=5, sticky= W)
+		#self.Entry_New_File_Path = Entry(Tab,width = 80, state="readonly", textvariable=self.Str_Test_Case_Path)
+		#self.Entry_New_File_Path.grid(row=Row, column=3, columnspan=7, padx=4, pady=5, sticky=W+E)
+		#Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['Browse'], command= self.Btn_Browse_Test_Case_File).grid(row=Row, column=10, padx=5, pady=0, sticky=W)
 		#Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['SelectFontColor'], command= self.Btn_Select_Font_Colour).grid(row=Row, column=9, columnspan=2,padx=5, pady=5, sticky=W)
 		
 	
 		Row += 1
-		Label(Tab, text= 'Execute List').grid(row=Row, column=1, columnspan=2, padx=5, pady=5, sticky=W)
+		ExecuteListLabel = Label(Tab, text= self.LanguagePack.Label['ExecuteList'])
+		ExecuteListLabel.grid(row=Row, column=1, columnspan=2, padx=5, pady=5, sticky=W)
+		CreateToolTip(ExecuteListLabel, self.LanguagePack.ToolTips['ExecuteList'])
 		self.ExecuteList = AutocompleteCombobox(Tab)
 		#self.TestProject = AutocompleteCombobox(Tab)
 		self.ExecuteList.set_completion_list([])
 		self.ExecuteList.Set_Entry_Width(30)
 		self.ExecuteList.grid(row=Row, column=3, padx=5, pady=5, sticky=W)
-		Button(Tab, width = self.Button_Width_Half, text= 'Browse List', command= self.Btn_Browse_Execution_List).grid(row=Row, column=4, columnspan=2, padx=5, pady=0, sticky=W)
+		Button(Tab, width = self.Button_Width_Half, text= self.LanguagePack.Button['Browse'], command= self.Btn_Browse_Execution_List).grid(row=Row, column=4, columnspan=2, padx=5, pady=0, sticky=W)
 		
 
 
@@ -257,9 +272,10 @@ class Automation_Execuser(Frame):
 		self.TextSerial = AutocompleteCombobox(Tab)
 		self.TextSerial.Set_Entry_Width(20)
 		self.TextSerial.bind("<<ComboboxSelected>>", self.ADB_Connect)
+
 		self.TextSerial.grid(row=Row, column=8, columnspan=2,padx=5, pady=5, sticky=W+E)
 		self.TextSerial.set_completion_list([])
-		Button(Tab, width = self.Button_Width_Half, text=  "Get Device", command= self.Get_Serial).grid(row=Row, column=10,padx=5, pady=0, sticky=W)
+		Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['Refresh'], command= self.Get_Serial).grid(row=Row, column=10,padx=5, pady=0, sticky=W)
 		
 		'''
 		Row += 1
@@ -274,61 +290,43 @@ class Automation_Execuser(Frame):
 
 		Row += 1
 	
-		Label(Tab, text= 'Execute Type').grid(row=Row, column=1, columnspan=2, padx=5, pady=5, sticky=W)
+		ExecuteTypeLabel = Label(Tab, text= self.LanguagePack.Label['ExecuteType'])
+		ExecuteTypeLabel.grid(row=Row, column=1, columnspan=2, padx=5, pady=5, sticky=W)
+		CreateToolTip(ExecuteTypeLabel, self.LanguagePack.ToolTips['ExecuteList'])
 		self.ExecuteType = AutocompleteCombobox(Tab)
 		#self.TestProject = AutocompleteCombobox(Tab)
-		self.ExecuteType.set_completion_list(['Current Value', 'List'])
+		self.ExecuteType.set_completion_list(['', 'Current Value', 'List'])
 		self.ExecuteType.Set_Entry_Width(30)
 		self.ExecuteType.current(0)
 		self.ExecuteType.grid(row=Row, column=3, padx=5, pady=5, sticky=W)
+		self.ExecuteType.configure(state=DISABLED)
 
-		
-		Label(Tab, text= "Device IP").grid(row=Row, column=7, padx=5, pady=5, sticky=W)	
-		self.Device_IP = Text(Tab, width=30, height=1, undo=True, wrap=WORD)
-		self.Device_IP.grid(row=Row, column=8, columnspan=2, padx=5, pady=5, sticky=E)
-		self.Device_IP.insert("end", "0.0.0.0")
-		Button(Tab, width = self.Button_Width_Half, text=  "Wireless Connect", command= self.Connect_Device).grid(row=Row, column=10, padx=5, pady=0, sticky=W)
+		Label(Tab, text= self.LanguagePack.Label['WorkingRes']).grid(row=Row, column=7, rowspan=2, padx=5, pady=0, sticky=W)
+		Radiobutton(Tab, width= 10, text=  '720p', value=1, variable=self.Resolution, command= self.Auto_Setting_Set_Working_Resolution).grid(row=Row, column=8, padx=5, pady=5, sticky=W)
+		#Label(Tab, text= "Device IP").grid(row=Row, column=7, padx=5, pady=5, sticky=W)	
+		#self.Device_IP = Text(Tab, width=30, height=1, undo=True, wrap=WORD)
+		#self.Device_IP.grid(row=Row, column=8, columnspan=2, padx=5, pady=5, sticky=E)
+		#self.Device_IP.insert("end", "0.0.0.0")
+		#Button(Tab, width = self.Button_Width_Half, text=  "Wireless Connect", command= self.Connect_Device).grid(row=Row, column=10, padx=5, pady=0, sticky=W)
 		
 		Row +=1
-		Label(Tab, text= self.LanguagePack.Label['WorkingLang']).grid(row=Row, column=1, columnspan=2, padx=5, pady=5, sticky=W)
+		TessLanguageLabel = Label(Tab, text= self.LanguagePack.Label['WorkingLang'])
+		TessLanguageLabel.grid(row=Row, column=1, columnspan=2, padx=5, pady=5, sticky=W)
+		CreateToolTip(TessLanguageLabel, self.LanguagePack.ToolTips['TessLanguage'])
 		self.option_working_language = AutocompleteCombobox(Tab)
 		self.option_working_language.Set_Entry_Width(30)
 
 		self.option_working_language.grid(row=Row, column=3, padx=5, pady=5, sticky=W)
-		Button(Tab, width = self.Button_Width_Half, text=  "Refresh", command= self.Btn_OCR_Update_Working_Language).grid(row=Row, column= 4, columnspan=2, padx=5, pady=0, sticky=W)	
+		Btn_Refresh_OCR_Lang = Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['Refresh'], command= self.Btn_OCR_Update_Working_Language)
+		Btn_Refresh_OCR_Lang.grid(row=Row, column= 4, columnspan=2, padx=5, pady=0, sticky=W)	
+		CreateToolTip(Btn_Refresh_OCR_Lang, 'Load all supported language from TessData folder.')
 
-		Label(Tab, text= self.LanguagePack.Label['WorkingRes']).grid(row=Row, column=7, padx=5, pady=0, sticky=W)
-		Radiobutton(Tab, width= 10, text=  '720p', value=1, variable=self.Resolution, command= self.Auto_Setting_Set_Working_Resolution).grid(row=Row, column=8, padx=5, pady=5, sticky=W)
-		Radiobutton(Tab, width= 10, text=  '1080p', value=2, variable=self.Resolution, command= self.Auto_Setting_Set_Working_Resolution).grid(row=Row, column=9, padx=5, pady=5, sticky=W)
+		
+		
+		Radiobutton(Tab, width= 10, text=  '1080p', value=2, variable=self.Resolution, command= self.Auto_Setting_Set_Working_Resolution).grid(row=Row, column=8, padx=5, pady=5, sticky=W)
 	
 		Row+=1
-		Treeview_Row = 20
-		self.Generate_Treeview_Advanced_UI(Tab, Row, Treeview_Row)
-
-		Row+=1
-		Button(Tab, width = self.Button_Width_Half, text=  'Add above', command= self.insert_treeview_above).grid(row=Row, column=10,padx=5, pady=0, sticky=W)
-
-		Row+=1
-		Button(Tab, width = self.Button_Width_Half, text=  "Add", command= self.add_treeview_row).grid(row=Row, column=10,padx=5, pady=0, sticky=W)
-
-		Row+=1
-		Button(Tab, width = self.Button_Width_Half, text=  "Move Up", command= self.move_treeview_up).grid(row=Row, column=10,padx=5, pady=0, sticky=W)
-		Row+=1
-		Button(Tab, width = self.Button_Width_Half, text=  "Move Down", command= self.move_treeview_down).grid(row=Row, column=10,padx=5, pady=0, sticky=W)
-		Row+=1
-		Button(Tab, width = self.Button_Width_Half, text=  "Load TC", command= self.Btn_Browse_Test_Case_File).grid(row=Row, column=10,padx=5, pady=0, sticky=W)
-		Row+=1
-		Button(Tab, width = self.Button_Width_Half, text=  "Save TC", command= self.Btn_Save_Test_Case_File).grid(row=Row, column=10,padx=5, pady=0, sticky=W)	
-		Row+=1
-		Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['Stop'], command= self.Stop).grid(row=Row, column=10,padx=5, pady=0, sticky=W)	
-		Row+=1
-		self.Btn_Execute = Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['Execute'], command= self.Btn_Execute_Script)
-		self.Btn_Execute.grid(row=Row, column=10,padx=5, pady=0, sticky=W)
-
-
-		Row += Treeview_Row
-
-		Label(Tab, text= "Action Type", width= 20).grid(row=Row, column=1, columnspan=2, padx=5, pady=5, sticky=W)
+		Label(Tab, text= self.LanguagePack.Label['ActionType'], width= 20).grid(row=Row, column=1, columnspan=2, padx=5, pady=5, sticky=W)
 		action_type_list = ['', 'Loop', 'Condition', 'Get_Result', 'Action', 'Update_Variable']
 		action_type_list.sort()
 		self.current_action_type.set(action_type_list[0])
@@ -337,27 +335,62 @@ class Automation_Execuser(Frame):
 		self.action_type.config(width=30)
 		#self.action_type.Set_Entry_Width(20)
 		#self.action_type.set_completion_list(['Loop', 'Condition', 'Get_Result', 'Action', 'Update_Variable',])
-		self.action_type.grid(row=Row, column=3, padx=5, pady=5, sticky=W)
+		self.action_type.grid(row=Row, column=3, columnspan=2, padx=5, pady=5, sticky=W)
 
 
-		Label(Tab, text= "Action Name", width= 20).grid(row=Row, column=5, columnspan=2, padx=5, pady=5, sticky=W)
+		Label(Tab, text= self.LanguagePack.Label['ActionName'], width= 20).grid(row=Row, column=5, padx=5, pady=5, sticky=W)
 		
-	
 		# creating widget
 		action_name_list = ['']
 		self.current_action_name.set(action_name_list[0])
 		self.action_name = OptionMenu(Tab, self.current_action_name, *action_name_list, command=self.Update_Action_Arg)
 		self.action_name.config(width=30)
 		#self.action_type.set_completion_list(['Loop', 'Condition', 'Get_Result', 'Action', 'Update_Variable',])
-		self.action_name.grid(row=Row, column=7, padx=5, pady=5, sticky=W)
+		self.action_name.grid(row=Row, column=6, columnspan=2, padx=5, pady=5, sticky=W)
+	
+		Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['InputData'], command= self.Generate_Input_Window).grid(row=Row, column=10, padx=5, pady=0, sticky=W+E)
+
+		Row+=1
+		Treeview_Row = 20
+		self.Generate_Treeview_Advanced_UI(Tab, Row, Treeview_Row)
+
+		Row+=1
+		Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['AddOnTop'], command= self.insert_treeview_above).grid(row=Row, column=10,padx=5, pady=0, sticky=W)
+
+		Row+=1
+		Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['AddStep'], command= self.add_treeview_row).grid(row=Row, column=10,padx=5, pady=0, sticky=W)
+
+		#Row+=1
+		#Button(Tab, width = self.Button_Width_Half, text=  "Move Up", command= self.move_treeview_up).grid(row=Row, column=10,padx=5, pady=0, sticky=W)
+		#Row+=1
+		#Button(Tab, width = self.Button_Width_Half, text=  "Move Down", command= self.move_treeview_down).grid(row=Row, column=10,padx=5, pady=0, sticky=W)
+		#Row+=1
+		#Button(Tab, width = self.Button_Width_Half, text=  "Load TC", command= self.Btn_Browse_Test_Case_File).grid(row=Row, column=10,padx=5, pady=0, sticky=W)
+		#Row+=1
+		#Button(Tab, width = self.Button_Width_Half, text=  "Save TC", command= self.Btn_Save_Test_Case_File).grid(row=Row, column=10,padx=5, pady=0, sticky=W)	
+		#Row+=1
+		
+
+
+		Row += Treeview_Row
+
+		
+	
 		Row+=1
 
 		self.Debugger = scrolledtext.ScrolledText(Tab, width=100, height=10, undo=True, wrap=WORD, )
 		self.Debugger.grid(row=Row, column=1, columnspan=9, rowspan=10, padx=5, pady=5, sticky=W+E+N+S)
-		Button(Tab, width = self.Button_Width_Half, text=  "Clear Log", command= self.ClearLog).grid(row=Row, column=10,padx=5, pady=0, sticky=W)
-
+		Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['ClearLog'], command= self.ClearLog).grid(row=Row, column=10,padx=5, pady=0, sticky=W)
+		Row+=1
+		Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['Stop'], command= self.Stop).grid(row=Row, column=10,padx=5, pady=0, sticky=W)	
+		Row+=1
+		self.Btn_Pause = Button(Tab, width = self.Button_Width_Half, text= self.LanguagePack.Button['Pause'], command= self.Pause, fg='red',font='sans 9 bold')
+		self.Btn_Pause.grid(row=Row, column=10,padx=5, pady=0, sticky=W)	
+		Row+=1
+		self.Btn_Execute = Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['Execute'], command= self.Btn_Execute_Script)
+		self.Btn_Execute.grid(row=Row, column=10,padx=5, pady=0, sticky=W)
 		#ScrollBar = Scrollbar(Tab, bg="green")
-		#ScrollBar.pack( side = RIGHT, fill = Y )
+		#ScrollBar.pack( side = RIGHT, fill = Y )	
 
 	def Generate_Treeview_Advanced_UI(self, Tab, start_row, row_span):
 		TreeView_Row = start_row
@@ -389,7 +422,10 @@ class Automation_Execuser(Frame):
 		styles.configure('Treeview',rowheight=row_span)
 
 		self.Treeview.bind("<Delete>", self.delete_treeview_line)	
-		self.Treeview.bind("<Double-1>", self.Treeview_OCR_Select_Row)
+		self.Treeview.bind("<Button-1>", self.Treeview_Deselect_Row)
+		self.Treeview.bind("<Double-1>", self.Treeview_Edit_Row)
+		self.Treeview.bind("<Button-3>", self.Treeview_Show_Right_Menu)
+		self.createWindow()
 
 	def Generate_OCR_Setting_UI(self, Tab):
 		''''
@@ -452,19 +488,21 @@ class Automation_Execuser(Frame):
 
 			self.AppConfig.Save_Config(self.AppConfig.Auto_Tool_Config_Path, 'AUTO_TOOL', 'tess_data', folder_name, True)
 
-			self.Write_Debug('Tesseract data folder has been set to: ' + folder_name)
+			self.Write_Debug(self.LanguagePack.ToolTips['TessDataUpdate'] + folder_name)
 		else:
 			self.Write_Debug(self.LanguagePack.ToolTips['SourceDocumentEmpty'])
 
 	def Btn_Browse_DB_File(self):
 			
-		filename = filedialog.askopenfilename(title =  self.LanguagePack.ToolTips['SelectSource'],filetypes = (("Workbook files", "*.xlsx *.xlsm"), ), multiple = False)	
+		filename = filedialog.askopenfilename(title =  self.LanguagePack.ToolTips['SelectSource'], filetypes = (("Workbook files", "*.xlsx *.xlsm, *.csv"), ), multiple = False)	
 		if filename != "":
 			self.DB_Path = self.CorrectPath(filename)
 			self.Text_DB_Path.set(self.DB_Path)
 			
 			self.AppConfig.Save_Config(self.AppConfig.Auto_Tool_Config_Path, 'AUTO_TOOL', 'db_path', self.DB_Path, True)
+			self.AutoTester.Update_DB_Path(self.DB_Path)
 			self.Write_Debug(self.LanguagePack.ToolTips['DataSelected'] + ": " + self.DB_Path)
+
 	
 		else:
 			self.Write_Debug(self.LanguagePack.ToolTips['SourceDocumentEmpty'])
@@ -534,6 +572,7 @@ class Automation_Execuser(Frame):
 				return
 			self.TextSerial.set_completion_list(Serrial)
 			self.TextSerial.set(Serrial[0])
+			self.AutoTester.Update_Serial_Number(Serrial[0])
 			
 			self.AutoTester.Update_Serial_Number(Serrial[0])
 		except:	
@@ -580,6 +619,20 @@ class Automation_Execuser(Frame):
 			pass
 		self.Show_Error_Message('Test is terminated')
 
+	def Pause(self):
+		
+		_text = self.Btn_Pause.cget("text")
+		print('Text', _text)
+		if _text == self.LanguagePack.Button['Pause']:
+			self.Result_Queue.put('Pause')
+			self.Btn_Pause.configure(text=self.LanguagePack.Button['Resume'])
+			self.Btn_Pause.configure(fg='green')
+			
+		else:
+			print('Set button to Pause')
+			self.Result_Queue.put('Resume')
+			self.Btn_Pause.configure(text=self.LanguagePack.Button['Pause'])
+			self.Btn_Pause.configure(fg='red')
 
 	# Other function
 	def Btn_OCR_Update_Working_Language(self):
@@ -590,12 +643,12 @@ class Automation_Execuser(Frame):
 		#self.language_list = pytesseract.get_languages(config=_tessdata_dir_config)
 		try:
 			self.language_list = pytesseract.get_languages(config=_tessdata_dir_config)
-			self.Write_Debug('Supported language list has been updated!')
+			self.Write_Debug(self.LanguagePack.ToolTips['TessLangUpdated'])
 
 		except Exception as e:
-			self.Write_Debug('Tess path: ' + str(_exe_))
-			self.Write_Debug('Data path: ' + str(_data_))
-			self.Write_Debug('Error while updating supported language: ' + str(e))
+			#self.Write_Debug('Tess path: ' + str(_exe_))
+			#self.Write_Debug('Data path: ' + str(_data_))
+			self.Write_Debug(self.LanguagePack.ToolTips['TessLangLoadFail'] + str(e))
 			self.language_list = ['']
 
 		self.option_working_language.set_completion_list(self.language_list)
@@ -668,18 +721,35 @@ class Automation_Execuser(Frame):
 		Add a row to the current Treeview
 		'''
 		selected = self.Treeview.selection()
-		if len(selected) == 0:
-			self.Generate_Arg_Input_Window('end', 'end')
-			return
+	
 		index_list = []
 		for child_obj in selected:
 			#child = self.Treeview.item(child_obj)
 			index = self.Treeview.index(child_obj)
 			index_list.append(index)
 		index_list.sort()	
-		print(index_list)
+
+		if len(selected) == 0:
+			start = 'end'
+			end = 'end'
+		else:
+			start = index_list[-1]+1
+			end = index_list[-1]+2
+		if self.Current_Arg_Type == None:
+			messagebox.showwarning('Warning', 'Please input the value before adding an action.')
+			return
+
+		self.Treeview.insert('', start, text= '', values = self.Current_Arg_Value)
+		
+		if self.Current_Arg_Type == 'Loop':
+			self.Treeview.insert('', end, text= '', values=['Loop','End Loop'])
+		elif self.Current_Arg_Type == 'Condition':
+			self.Treeview.insert('', end, text= '', values= ['Condition', 'End If'])
+		else:
+			print('Type:', self.Current_Arg_Type)	
+		
 		#index = self.Treeview.index(self.Treeview.focus()) + 1
-		self.Generate_Arg_Input_Window(index_list[-1]+1, index_list[-1]+2)	
+		#self.Generate_Arg_Input_Window(index_list[-1]+1, index_list[-1]+2)	
 
 		
 
@@ -688,9 +758,7 @@ class Automation_Execuser(Frame):
 		Add a row above the current Treeview
 		'''
 		selected = self.Treeview.selection()
-		if len(selected) == 0:
-			self.Generate_Arg_Input_Window(0, 1)
-			return
+		
 		
 		index_list = []
 		for child_obj in selected:
@@ -698,14 +766,26 @@ class Automation_Execuser(Frame):
 			index = self.Treeview.index(child_obj)
 			index_list.append(index)
 		index_list.sort()
-		print(index_list)
-		start = index_list[0]
-		
-		if len(index_list) == 1:
-			self.Generate_Arg_Input_Window(start, start+1+len(index_list))	
+		if len(selected) == 0:
+			start = 0
+			end = 1
 		else:
-			self.Generate_Arg_Input_Window(start, index_list[-1]+1+len(index_list))
+			start = index_list[0]
+			if len(index_list) == 1:
+				end = start+1+len(index_list)
+			else:
+				end = index_list[-1]+1+len(index_list)
+		if self.Current_Arg_Type == None:
+			messagebox.showwarning('Warning', 'Please input the value before adding an action.')
+			return
+		self.Treeview.insert('', start, text= '', values = self.Current_Arg_Value)
 		
+		if self.Current_Arg_Type == 'Loop':
+			self.Treeview.insert('', end, text= '', values=['Loop','End Loop'])
+		elif self.Current_Arg_Type == 'Condition':
+			self.Treeview.insert('', end, text= '', values= ['Condition', 'End If'])
+		else:
+			print('Type:', self.Current_Arg_Type)	
 
 	def insert_treeview_below(self):
 		'''
@@ -721,9 +801,19 @@ class Automation_Execuser(Frame):
 		print(index_list)
 		#index = self.Treeview.index(self.Treeview.focus()) + 1
 		if len() == 1:
-			self.Generate_Arg_Input_Window(index_list[0], index_list[0]+1)	
+			start = index_list[0]
+			end = index_list[0]+1
 		else:
-			self.Generate_Arg_Input_Window(index_list[0]+1, index_list[-1]+1)
+			start = index_list[0]+1
+			end = index_list[-1]+1
+		self.Treeview.insert('', start, text= '', values = self.Current_Arg_Value)
+		if self.Current_Arg_Type == 'Loop':
+			self.Treeview.insert('', end, text= '', values=['Loop','End Loop'])
+		elif self.Current_Arg_Type == 'Condition':
+			self.Treeview.insert('', end, text= '', values= ['Condition', 'End If'])
+		else:
+			print('Type:', self.Current_Arg_Type)		
+		
 		
 	def move_treeview_up(self):
 		leaves = self.Treeview.selection()
@@ -830,12 +920,42 @@ class Automation_Execuser(Frame):
 
 		#self.Update_Treeview_Advanced_UI()
 
-	def Treeview_OCR_Select_Row(self, event):
+	def Treeview_Deselect_Row(self, event):
 		'''
 		Function activate when double click an entry from Treeview
 		'''
 		if len(self.Treeview.selection()) > 0:
 			self.Treeview.selection_remove(self.Treeview.selection()[0])
+
+	def Treeview_Edit_Row(self, event):
+		'''
+		Function activate when double click an entry from Treeview
+		'''
+		self.Focused_Item = self.Treeview.focus()
+		child = self.Treeview.item(self.Focused_Item)
+		index = self.Treeview.index(self.Focused_Item)
+		if len(child["values"]) > 2:
+			_type = child["values"][0]
+			_name = child["values"][1]
+			self.Generate_Arg_Edit_Window(self.Focused_Item, _type, _name)
+
+			
+
+	def Treeview_Show_Right_Menu(self, event):
+		item = self.Treeview.identify_row(event.y)
+		try:
+			self.popup.tk_popup(event.x_root, event.y_root, 0)
+		finally:
+			self.popup.grab_release()
+
+	
+	def createWindow(self):
+		self.popup = Menu(self.parent, tearoff=0)
+		self.popup.add_command(label="Move Up", command = self.move_treeview_up) # , command=next) etc...
+		self.popup.add_command(label="Move Down", command = self.move_treeview_down)
+		#self.popup.add_separator()
+		#self.popup.add_command(label="Exit", command=lambda: self.closeWindow())
+
 
 	def Btn_OCR_Update_Area(self):
 
@@ -868,12 +988,15 @@ class Automation_Execuser(Frame):
 		except:
 			pass	
 
-	
-
 	def Update_Action_Arg(self, action_name=None):
 		this_type = self.current_action_type.get()
 		this_action = self.current_action_name.set(action_name)
-				
+		if action_name == 'Loop List':
+			print(self.ExecuteType.get())
+			if self.ExecuteType.get() == '':
+				messagebox.showwarning('Warning', ' Loop list only available when you select a execution list.')
+				this_action = self.current_action_name.set('')
+				return
 		this_arg = self.action_dict[this_type][action_name]
 		print('this_arg', action_name, this_arg)
 
@@ -886,20 +1009,23 @@ class Automation_Execuser(Frame):
 
 		return values
 
-	def Generate_Arg_Input_Window(self, treeview_start_index, treeview_end_index):
-		this_type = self.current_action_type.get()
+	def Generate_Input_Window(self, this_type = None, this_action = None):
+		if this_type == None:
+			this_type = self.current_action_type.get()
 		if this_type == '':
-			messagebox.showinfo('Error...', 'Please select an action type')	
+			messagebox.showwarning('Warning', 'Please select an action type')	
 			return
-		this_action = self.current_action_name.get()
+		if this_action == None:
+			this_action = self.current_action_name.get()
 		if this_action == '':
-			messagebox.showinfo('Error...', 'Please select an action name')	
+			messagebox.showwarning('Warning', 'Please select an action name')	
 			return
 		arg_dict = self.action_dict[this_type][this_action]
+		self.Current_Arg_Value = []
+		self.Current_Arg_Type = None
 		if arg_dict == None:
-			self.Get_Input_Value_On_Closing(None,[],treeview_start_index, treeview_end_index)
 			return
-
+		
 		child_windows = Toplevel(self.parent)
 		#child_windows.geometry("200x200")  # Size of the window 
 		child_windows.resizable(False, False)
@@ -944,8 +1070,8 @@ class Automation_Execuser(Frame):
 					# creating widget
 					arg_data['widget'] = AutocompleteCombobox(child_windows)
 					arg_data['widget'].set_completion_list(value_list)
-					self.ExecuteList.Set_Entry_Width(30)
-					arg_data['widget'].grid(row=row,column=2, padx=10, pady=10, sticky=S)
+					arg_data['widget'].Set_Entry_Width(35)
+					arg_data['widget'].grid(row=row,column=2, padx=10, pady=10, sticky=W+S)
 				elif arg_data['variable_type'] == 'user_list':
 					#self.Execute_List_values
 					arg_data['value_variable'] = StringVar()
@@ -954,11 +1080,11 @@ class Automation_Execuser(Frame):
 					# creating widget
 					arg_data['widget'] = AutocompleteCombobox(child_windows)
 					arg_data['widget'].set_completion_list(value_list)
-					self.ExecuteList.Set_Entry_Width(30)
-					arg_data['widget'].grid(row=row,column=2, padx=10, pady=10, sticky=S)
+					arg_data['widget'].Set_Entry_Width(35)
+					arg_data['widget'].grid(row=row,column=2, padx=10, pady=10, sticky=W+S)
 				elif arg_data['variable_type'] == 'point':
 					arg_data['widget'] = Text(child_windows, height = 1, width=30)
-					arg_data['widget'].grid(row=row,column=2, padx=10, pady=10, sticky=S)
+					arg_data['widget'].grid(row=row,column=2, padx=10, pady=10, sticky=W)
 					if self.AutoTester.Device != None:
 						btn_status = NORMAL
 					else:
@@ -980,8 +1106,107 @@ class Automation_Execuser(Frame):
 					Label(child_windows, text= 'N/A').grid(row=row,column=2, padx=10, pady=10, sticky=S)
 				arg_data_list.append(arg_data)
 				row +=1
-		child_windows.protocol("WM_DELETE_WINDOW", lambda c=child_windows,i=treeview_start_index, j = treeview_end_index, a=arg_data_list: self.Get_Input_Value_On_Closing(c,a,i,j))		
-		Button(child_windows, text = 'Set value', command = lambda c=child_windows,i=treeview_start_index, j= treeview_end_index, a=arg_data_list: self.Get_Input_Value_On_Closing(c,a,i,j)).grid(row=row,column=2, padx=10, pady=10, sticky=E)
+		child_windows.protocol("WM_DELETE_WINDOW", lambda c=child_windows, a=arg_data_list: self.Store_Input_Value_On_Closing(c,a))		
+		Button(child_windows, text = 'Set value', command = lambda c=child_windows, a=arg_data_list: self.Store_Input_Value_On_Closing(c,a)).grid(row=row,column=2, padx=10, pady=10, sticky=E)
+
+
+	def Generate_Arg_Edit_Window(self, treeview_node, this_type = None, this_action = None):
+		if this_type == None:
+			this_type = self.current_action_type.get()
+		if this_type == '':
+			messagebox.showwarning('Warning', 'Please select an action type')	
+			return
+		if this_action == None:
+			this_action = self.current_action_name.get()
+		if this_action == '':
+			messagebox.showinfo('Error...', 'Please select an action name')	
+			return
+		arg_dict = self.action_dict[this_type][this_action]
+		if arg_dict == None:
+			self.Modify_Input_Value_On_Closing(None,[], this_type, this_action, treeview_node)
+			return
+
+		child_windows = Toplevel(self.parent)
+		#child_windows.geometry("200x200")  # Size of the window 
+		child_windows.resizable(False, False)
+		child_windows.title("Input the action argument")
+		
+		arg_name = [*arg_dict]
+		row = 1
+		value_array = []
+		button_array = []
+		arg_data_list = []
+		if len(arg_name) > 0:
+			for arg in arg_name:
+				arg_data = {}
+				arg_data['variable_type'] = None
+				arg_data['value_variable'] = None
+				arg_data['widget'] = None
+				arg_data['button'] = None
+
+				Label(child_windows, text= arg, anchor=S, justify=LEFT).grid(row=row,column=1, padx=10, pady=10, sticky=S)
+				#value_array[row] = StringVar()
+				temp_Variable_type = arg_dict[arg]
+				if temp_Variable_type == None:
+					arg_data['variable_type'] = None
+					Label(child_windows, text= 'N/A').grid(row=row,column=2, padx=10, pady=10, sticky=S)
+				elif temp_Variable_type.startswith('_'):
+					# If variable type has the '_' before the type name, that arg cannot leave as empty.
+					arg_data['variable_type'] = temp_Variable_type[1:]
+					arg_data['input_require'] = True
+				else:
+					arg_data['variable_type'] = temp_Variable_type
+					arg_data['input_require'] = False
+				
+				if arg_data['variable_type'] in ['string', 'int']:
+					arg_data['widget'] = Text(child_windows, height = 1, width=30)
+					arg_data['widget'].grid(row=row,column=2, padx=10, pady=10, sticky=S)
+				elif arg_data['variable_type'] == 'string_id':
+					arg_data['value_variable'] = StringVar()
+					value_list = [*self.AutoTester.UI]
+					value_list.sort()
+					arg_data['value_variable'].set(value_list[0])
+					# creating widget
+					arg_data['widget'] = AutocompleteCombobox(child_windows)
+					arg_data['widget'].set_completion_list(value_list)
+					arg_data['widget'].Set_Entry_Width(35)
+					arg_data['widget'].grid(row=row,column=2, padx=10, pady=10, sticky=W+S)
+				elif arg_data['variable_type'] == 'user_list':
+					#self.Execute_List_values
+					arg_data['value_variable'] = StringVar()
+					value_list = ['Varlue 1', 'Varlue 2', 'Varlue 3', 'Varlue 4', 'Varlue 5', 'Varlue 6']
+					arg_data['value_variable'].set(value_list[0])
+					# creating widget
+					arg_data['widget'] = AutocompleteCombobox(child_windows)
+					arg_data['widget'].set_completion_list(value_list)
+					arg_data['widget'].Set_Entry_Width(35)
+					arg_data['widget'].grid(row=row,column=2, padx=10, pady=10, sticky=S)
+				elif arg_data['variable_type'] == 'point':
+					arg_data['widget'] = Text(child_windows, height = 1, width=30)
+					arg_data['widget'].grid(row=row,column=2, padx=10, pady=10, sticky=W+S)
+					if self.AutoTester.Device != None:
+						btn_status = NORMAL
+					else:
+						btn_status = DISABLED
+					arg_data['button'] = Button(child_windows, text = 'Select', command = lambda val=arg_data['widget']: self.Btn_Select_Point(val), state=btn_status)
+					arg_data['button'].grid(row=row,column=3, padx=10, pady=10, sticky=E)
+
+				elif arg_data['variable_type'] == 'area':
+					arg_data['widget'] = Text(child_windows, height = 1, width=30)
+					arg_data['widget'].grid(row=row,column=2, padx=10, pady=10, sticky=S)
+					if self.AutoTester.Device != None:
+						btn_status = NORMAL
+					else:
+						btn_status = DISABLED
+					arg_data['button'] = Button(child_windows, text = 'Select', command = lambda val=arg_data['widget']: self.Btn_Select_Area(val), state=btn_status)
+					arg_data['button'].grid(row=row,column=3, padx=10, pady=10, sticky=E)
+
+				else:
+					Label(child_windows, text= 'N/A').grid(row=row,column=2, padx=10, pady=10, sticky=S)
+				arg_data_list.append(arg_data)
+				row +=1
+		child_windows.protocol("WM_DELETE_WINDOW", lambda c=child_windows,x= this_type, y= this_action,i=treeview_node, a=arg_data_list: self.Modify_Input_Value_On_Closing(c,a,x, y, i))		
+		Button(child_windows, text = 'Set value', command = lambda c=child_windows,x= this_type, y= this_action,i=treeview_node, a=arg_data_list: self.Modify_Input_Value_On_Closing(c,a,x, y, i)).grid(row=row,column=2, padx=10, pady=10, sticky=E)
 
 	def Btn_Select_Area(self, text_widget):
 		im = self.AutoTester.Get_Current_Screenshot()
@@ -1020,8 +1245,7 @@ class Automation_Execuser(Frame):
 				cv2.destroyAllWindows()
 				self.temp_widget.insert("end", json.dumps(point)) 
 
-
-	def Get_Input_Value_On_Closing(self,child_windows, arg_data_list, treeview_start_index, treeview_end_index):
+	def Store_Input_Value_On_Closing(self,child_windows, arg_data_list):
 		this_type = self.current_action_type.get()
 		this_action = self.current_action_name.get()
 	
@@ -1034,7 +1258,7 @@ class Automation_Execuser(Frame):
 				temp_value = arg_data['widget'].get("1.0", END).replace('\n', '')
 				
 			elif arg_data['variable_type'] == 'string_id':
-				temp_value = arg_data['widget'].get("1.0", END)
+				temp_value = arg_data['widget'].get()
 			elif arg_data['variable_type'] == 'point':
 				temp_value = arg_data['widget'].get("1.0", END).replace('\n', '')
 			elif arg_data['variable_type'] == 'user_list':
@@ -1053,12 +1277,47 @@ class Automation_Execuser(Frame):
 			input_value.append(temp_value)
 		values = [this_type] + [this_action] + input_value
 
-		self.Treeview.insert('', treeview_start_index, text= '', values=values)
-		
-		if this_type == 'Loop':
-			self.Treeview.insert('', treeview_end_index, text= '', values=['Loop','End Loop'])
-		elif this_type == 'Condition':
-			self.Treeview.insert('', treeview_end_index, text= '', values= ['Condition', 'End If'])
+		self.Current_Arg_Value = values
+		self.Current_Arg_Type = this_type
+		if child_windows != None:
+			child_windows.destroy()	
+
+	def Modify_Input_Value_On_Closing(self,child_windows, arg_data_list, this_type= None, this_action= None, treeview_node= None):
+		if this_type == None:
+			this_type = self.current_action_type.get()
+		if this_action == None:	
+			this_action = self.current_action_name.get()
+	
+		input_value = []
+		for arg_data in arg_data_list:
+			temp_value = None
+			if arg_data['variable_type'] == None:
+				temp_value = ''
+			elif arg_data['variable_type'] in ['string', 'int']:
+				temp_value = arg_data['widget'].get("1.0", END).replace('\n', '')
+				
+			elif arg_data['variable_type'] == 'string_id':
+				temp_value = arg_data['widget'].get()
+			elif arg_data['variable_type'] == 'point':
+				temp_value = arg_data['widget'].get("1.0", END).replace('\n', '')
+			elif arg_data['variable_type'] == 'user_list':
+					value_list = ['Varlue 1', 'Varlue 2', 'Varlue 3', 'Varlue 4', 'Varlue 5', 'Varlue 6']
+					selected = arg_data['widget'].get()
+					temp_value = value_list.index(selected)
+					
+					
+			elif arg_data['variable_type'] == 'area':
+				temp_value = arg_data['widget'].get("1.0", END).replace('\n', '')
+			elif arg_data['variable_type'] == 'list':
+				temp_value = []
+				
+			else:
+				input_value.append("")
+			input_value.append(temp_value)
+		values = [this_type] + [this_action] + input_value
+
+		self.Treeview.item(treeview_node, text= '', values=values)
+
 		if child_windows != None:
 			child_windows.destroy()	
 
@@ -1186,12 +1445,16 @@ class Automation_Execuser(Frame):
 			messagebox.showinfo('Error...', 'Please input file name to create the template.')	
 			return
 		else:
-			with open(filename, 'w', newline='') as csvfile:
+			try:
+				with open(filename, 'w', newline='') as csvfile:
 
-				fieldnames = ['Type', 'Action', 'Arg1', 'Arg2', 'Arg3', 'Arg4', 'Arg5', 'Arg6']
-			
-				writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-				writer.writeheader()
+					fieldnames = ['Type', 'Action', 'Arg1', 'Arg2', 'Arg3', 'Arg4', 'Arg5', 'Arg6']
+				
+					writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+					writer.writeheader()
+
+			except Exception as e:
+				messagebox.showerror("Error", str(e))			
 			
 	
 	def Menu_Function_Save_DB_Template(self):
@@ -1201,12 +1464,15 @@ class Automation_Execuser(Frame):
 			messagebox.showinfo('Error...', 'Please input file name to create the template.')	
 			return
 		else:
-			with open(filename, 'w', newline='') as csvfile:
+			try:
+				with open(filename, 'w', newline='') as csvfile:
 
-				fieldnames = ['StringID', 'String_EN', 'String_KO', 'Path']
-			
-				writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-				writer.writeheader()
+					fieldnames = ['StringID', 'String_EN', 'String_KO', 'Path']
+				
+					writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+					writer.writeheader()
+			except Exception as e:
+				messagebox.showerror("Error", str(e))		
 	
 	def Menu_Function_Save_Execute_List_Template(self):
 		filename = filedialog.asksaveasfilename(title = "Select file", filetypes = (("Scan Config", "*.csv"),),)
@@ -1215,13 +1481,17 @@ class Automation_Execuser(Frame):
 			messagebox.showinfo('Error...', 'Please input file name to create the template.')	
 			return
 		else:
-			with open(filename, 'w', newline='') as csvfile:
+			try:
+				with open(filename, 'w', newline='') as csvfile:
 
-				fieldnames = ['name', 'Arg1', 'Arg2', 'Arg3', 'Arg4', 'Arg5', 'Arg6']
-			
-				writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-				writer.writeheader()		
-	
+					fieldnames = self.Execute_List_header
+				
+					writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+					writer.writeheader()		
+					writer.writerow({'Name': 'All supported type', 'Value_1': '1', 'Type_1': 'int', 'Value_2': 'Any text', 'Type_2': "string", 'Value_3': '0.01', 'Type_3': 'float', 'Value_4': '{"x":100, "y": 200}', 'Type_4': 'point','Value_5': '{"x":100, "y": 200, "w": 50, "h":75}', 'Type_5': 'area','Value_6': 'String'})
+
+			except Exception as e:
+				messagebox.showerror("Error", str(e))		
 
 	def ErrorMsg(self, ErrorText):
 		messagebox.showinfo('Error...', ErrorText)	
@@ -1243,7 +1513,11 @@ class Automation_Execuser(Frame):
 
 		return
 
-	def onExit(self):
+	def on_closing(self):
+		self.parent.destroy()
+		if self.Automation_Processor.is_alive():	
+			self.Automation_Processor.terminate()
+
 		self.quit()
 
 
@@ -1256,7 +1530,8 @@ class Automation_Execuser(Frame):
 		self.TesseractDataPath = StringVar()
 		self.WorkingLanguage = StringVar()
 		self.language_list = ['']
-
+		self.Current_Arg_Type = []
+		self.Current_Arg_Type = None
 		self.Resolution = IntVar()
 
 		self.DBPath = StringVar()
@@ -1284,11 +1559,19 @@ class Automation_Execuser(Frame):
 		self.TesseractDataPath.set(_tesseract_data_path)
 
 		_db_path = self.Configuration['AUTO_TOOL']['db_path']
+		if not os.path.isfile(_db_path):
+			with open(_db_path, 'w', newline='') as csvfile:
+				fieldnames = ['StringID', 'String_EN', 'String_KO', 'Path']
+				writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+				writer.writeheader()
+			self.AppConfig.Save_Config(self.AppConfig.Auto_Tool_Config_Path, 'AUTO_TOOL', 'db_path', _db_path, True)
+		
 		self.Text_DB_Path.set(_db_path)
 		self.DB_Path = _db_path
 		
-		_resolution = self.Configuration['AUTO_TOOL']['resolution']
-		self.Resolution.set(_resolution)
+		self.Execute_List_header = ['Name', 'Value_1', 'Type_1', 'Value_2', 'Type_2', 'Value_3', 'Type_3', 'Value_4', 'Type_4', 'Value_5', 'Type_5', 'Value_6', 'Type_6']
+
+		self.Execute_List_values = None
 
 	def init_UI_Data(self):
 		
@@ -1296,11 +1579,14 @@ class Automation_Execuser(Frame):
 		_working_language = self.Configuration['AUTO_TOOL']['scan_lang']
 		self.option_working_language.set(_working_language)
 
-		#self.AutoTester.Update_DB_Path(self.DB_Path)
+		self.AutoTester.Update_DB_Path(self.DB_Path)
 
 		if self.TesseractPath != None and self.TesseractDataPath != None and _working_language != None:
 			print('Enable OCR')
 			self.AutoTester.Update_Tesseract(self.TesseractPath, self.TesseractDataPath, _working_language)
+
+		_resolution = self.Configuration['AUTO_TOOL']['resolution']
+		self.Resolution.set(_resolution)
 
 		self.Update_Action_List()
 		self.Get_Serial()
@@ -1330,7 +1616,7 @@ class Automation_Execuser(Frame):
 			self.Notice.set(self.LanguagePack.ToolTips['SourceDocumentEmpty'])
 		return
 
-	def Btn_Browse_Test_Case_File(self):
+	def Btn_Browse_Test_Case_File(self,event=None):
 		config_file = filedialog.askopenfilename(initialdir = CWD + "//Testcase", title =  self.LanguagePack.ToolTips['SelectSource'], filetypes = (("Config files", "*.csv"), ), multiple = False)	
 		
 		if os.path.isfile(config_file):
@@ -1359,7 +1645,7 @@ class Automation_Execuser(Frame):
 		execution_list_file = filedialog.askopenfilename(initialdir = CWD + "//Testcase", title =  self.LanguagePack.ToolTips['SelectSource'], filetypes = (("Config files", "*.csv"), ), multiple = False)	
 		
 		if os.path.isfile(execution_list_file):
-			all_col = ['name', 'Arg1', 'Arg2', 'Arg3', 'Arg4', 'Arg5', 'Arg6']
+			all_col = self.Execute_List_header
 			self.Display_List = []
 			self.Execute_List_values = []
 
@@ -1369,25 +1655,33 @@ class Automation_Execuser(Frame):
 				for execution_item in reader:
 					_indexer+=1
 					item_list = []
-					for col in all_col:
-						if col in execution_item:
-							
-							if col == 'name':
-								self.Display_List.append('[' + str(_indexer) + '] ' + execution_item['name'])
+					if all_col[0] in execution_item:
+						self.Display_List.append('[' + str(_indexer) + '] ' + execution_item[all_col[0]])
+					for i in range(1, 7):
+						_col_val = 'Value_'+ str(i)
+						_col_val_type = 'Type_'+ str(i)
+						
+						if _col_val in execution_item and _col_val_type in execution_item:
+							_val = execution_item[_col_val]
+							_val_type = execution_item[_col_val_type]
+							if _val == '':
 								continue
-							else:
-								value = str(execution_item[col])
-						else:
-							value = ""
-						item_list.append(value)	
-					self.Execute_List_values.append(item_list)			
+							if _val_type == '':
+								_val_type = 'string'
+							parsed_value = self.AutoTester.Function_Parse_Data(_val_type, _val)
+							item_list.append(parsed_value)	
+
+					self.Execute_List_values.append(item_list)	
+			#print('self.Execute_List_values',self.Execute_List_values)
 			self.ExecuteList.set_completion_list(self.Display_List)
 			self.ExecuteList.current(0)
-		
+			self.ExecuteType.configure(state=NORMAL)
+			self.AutoTester.Update_LoopList()
+			self.Update_Action_List()
 		else:
 			self.Write_Debug(self.LanguagePack.ToolTips['SourceDocumentEmpty'])
 
-	def Btn_Save_Test_Case_File(self):
+	def Btn_Save_Test_Case_File(self, event=None):
 		'''
 		Save all added scan areas to csv file.
 		'''
@@ -1459,13 +1753,17 @@ class Automation_Execuser(Frame):
 
 		DB_Path = self.Text_DB_Path.get()
 		_Execute_Type = self.ExecuteType.get()
+		if _Execute_Type != "":
+			if self.Execute_List_values == None:
+				messagebox.showinfo('Error...', 'No device found')
+				return
 		if _Execute_Type == 'Current Value':
-			
 			_Execute_Name = self.ExecuteList.get()
 			_indexer = self.Display_List.index(_Execute_Name)
 			_Execute_Value = [self.Execute_List_values[_indexer]]
 		else:
 			# Loop all list
+			
 			_Execute_Value = self.Execute_List_values
 
 		
@@ -1485,7 +1783,7 @@ class Automation_Execuser(Frame):
 			Result_Folder_Path = Dir + '\\Result' + '_' + Name + '_' + Function_Get_TimeStamp()
 		
 
-		#Init_Folder(Result_Folder_Path)
+		Init_Folder(Result_Folder_Path)
 		
 		Result_File_Path = Result_Folder_Path + '\\' + Name + '_' + Function_Get_TimeStamp()
 		
@@ -1503,6 +1801,7 @@ class Automation_Execuser(Frame):
 	 	
 		_kwargs= {	'Status_Queue' : self.Status_Queue, 
 					'Result_Queue' : self.Result_Queue, 
+					'Progress_Queue': self.Process_Queue,
 					'Serial' : _serial, 
 					'Resolution': self.WorkingResolution,
 					'Language': _tess_language,
@@ -1530,55 +1829,21 @@ class Automation_Execuser(Frame):
 					self.Debugger.yview(END)
 			except queue.Empty:
 				break
-		#self.check_device_connection()
-		self.after(DELAY2, self.status_listening)
+		device_status = self.AutoTester.Check_Connectivity()
+		if device_status != False:
+			device_status = True
+			self.after(DELAY2, self.status_listening)
+		else:
+			self.after(DELAY3, self.status_listening)
+		#print('Device status:', device_status, time.time()- Start)
+		
 
 	def Wait_For_Automation_Processor(self):
 		if (self.Automation_Processor.is_alive()):	
 			self.after(DELAY1, self.Wait_For_Automation_Processor)
 		else:
 			self.Automation_Processor.terminate()
-			#self.Show_Error_Message('Test is completed')
-
-	def Btn_Generate_TestCase(self):
-		DB = self.Text_DB_Path.get()
-		
-		Test_Case = self.Str_Test_Case_Path.get()
-		Serial = self.TextSerial.get().replace('\n','')
-		#MyDB = self.Function_Import_DB(self.DB_Path)
-		self.Automation_ScriptLoader = Process(target=Function_Generate_Testcase, args=(self.Status_Queue, self.Result_Queue, DB, Test_Case,))
-		#self.Data_Compare_Process = Process(target=Old_Function_Compare_Excel, args=(self.Status_Queue, self.Process_Queue, Old_File, New_File, Output_Result, Sheet_Name, Index_Col, self.Background_Color, self.Font_Color,))
-		self.Automation_ScriptLoader.start()
-		self.after(DELAY1, self.Wait_For_Automation_ScriptLoader)	
-
-	def Wait_For_Automation_ScriptLoader(self):
-		if (self.Automation_ScriptLoader.is_alive()):
-			try:
-				Status = self.Status_Queue.get(0)
-				if Status != None:
-					self.Debugger.insert("end", "\n\r")
-					self.Debugger.insert("end", Status)
-					self.Debugger.yview(END)
-			except queue.Empty:
-				pass	
-			self.after(DELAY1, self.Wait_For_Automation_ScriptLoader)
-		else:
-			try:
-				self.TestCase = self.Result_Queue.get(0)
-				if self.TestCase != None:
-					self.Update_Execute_List()
-					self.Automation_ScriptLoader.terminate()
-					
-					self.Debugger.insert("end", "\n\r")
-					self.Debugger.insert("end", 'Testcase config loaded.')
-					return
-				self.Debugger.insert("end", "\n\r")
-				self.Debugger.insert("end", 'Fail to load testcase config.')	
-				self.Automation_ScriptLoader.terminate()
-
-			except queue.Empty:
-				pass
-			
+			#self.Show_Error_Message('Test is completed')	
 
 ###########################################################################################
 
@@ -1592,7 +1857,7 @@ class Automation_Execuser(Frame):
 ###########################################################################################
 
 def Function_Execute_Script(
-		Status_Queue, Result_Queue, Serial, DB_Path, Tess_Path, Tess_Data, Resolution, Language, Result_Folder_Path, Result_File_Path, TestCaseObject = [], Execute_List = None, **kwargs
+		Status_Queue, Progress_Queue, Result_Queue, Serial, DB_Path, Tess_Path, Tess_Data, Resolution, Language, Result_Folder_Path, Result_File_Path, TestCaseObject = [], Execute_List = None, **kwargs
 ):
 	
 	#print("All variable:", locals())
@@ -1622,7 +1887,8 @@ def Function_Execute_Script(
 	for block in result:
 		index+=1
 		print('Block:', index, str(block))
-	AutoTester.Function_Execute_Block(result)
+	print('Leng of real test case: ', index)	
+	AutoTester.Function_Execute_Block(Status_Queue, Progress_Queue, Result_Queue, result)
 		
 	
 	#AutoTester.Function_Execute_TestCase(TestCaseObject)	
@@ -1697,6 +1963,16 @@ def Function_Generate_Testcase(
 	return
 
 ###########################################################################################
+def fixed_map(style, option):
+	# Fix for setting text colour for Tkinter 8.6.9
+	# From: https://core.tcl.tk/tk/info/509cafafae
+	#
+	# Returns the style map for 'option' with any styles starting with
+	# ('!disabled', '!selected', ...) filtered out.
+	# style.map() returns an empty list for missing options, so this
+	# should be future-safe.
+	return [elm for elm in style.map('Treeview', query_opt=option) if
+	  elm[:2] != ('!disabled', '!selected')]
 
 def main():
 	Process_Queue = Queue()
@@ -1708,6 +1984,9 @@ def main():
 	Default_Manager = MyManager.list()
 	
 	root = Tk()
+	style = Style(root)
+	style.map('Treeview', foreground=fixed_map(style, 'foreground'), background=fixed_map(style, 'background'))
+
 	My_Queue = {}
 	My_Queue['Process_Queue'] = Process_Queue
 	My_Queue['Result_Queue'] = Result_Queue
@@ -1716,9 +1995,23 @@ def main():
 
 	My_Manager = {}
 	My_Manager['Default_Manager'] = Default_Manager
-
-	Windows = Automation_Execuser(root, Queue = My_Queue, Manager = My_Manager,)
-	root.mainloop()  
+	Windows = None
+	
+	try:
+		Windows = Automation_Execuser(root, Queue = My_Queue, Manager = My_Manager,)
+		root.mainloop() 
+	except Exception as e:
+		root.withdraw()
+		messagebox.showinfo(title='Critical error', message=e)
+		
+		if Windows != None:
+			Windows.destroy()	
+			
+			if Windows.Automation_Processor != None:
+				try:
+					Windows.Automation_Processor.terminate()
+				except:
+					pass	
 
 
 if __name__ == '__main__':

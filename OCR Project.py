@@ -87,7 +87,7 @@ class OCR_Project(Frame):
 		Frame.__init__(self, Root) 
 		#super().__init__()
 		self.parent = Root 
-
+		
 		# Queue
 		self.Process_Queue = Queue['Process_Queue']
 		self.Result_Queue = Queue['Result_Queue']

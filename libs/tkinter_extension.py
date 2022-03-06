@@ -341,14 +341,37 @@ class AutocompleteEntry(Entry):
 class CreateToolTip(object):
 	'''
 	create a tooltip for a given widget
+	To add a tool tip to a WIDGET, use CreateToolTip(WIDGET, text)
 	'''
 	def __init__(self, widget, text='widget info'):
+		self.waittime = 500     #miliseconds
+		self.wraplength = 180   #pixels
 		self.widget = widget
 		self.text = text
 		self.widget.bind("<Enter>", self.enter)
-		self.widget.bind("<Leave>", self.close)
+		self.widget.bind("<Leave>", self.leave)
+		self.widget.bind("<ButtonPress>", self.leave)
+		self.id = None
+		self.tw = None
 
 	def enter(self, event=None):
+		self.schedule()
+
+	def leave(self, event=None):
+		self.unschedule()
+		self.hidetip()
+
+	def schedule(self):
+		self.unschedule()
+		self.id = self.widget.after(self.waittime, self.showtip)
+
+	def unschedule(self):
+		id = self.id
+		self.id = None
+		if id:
+			self.widget.after_cancel(id)
+
+	def showtip(self, event=None):
 		x = y = 0
 		x, y, cx, cy = self.widget.bbox("insert")
 		x += self.widget.winfo_rootx() + 25
@@ -359,10 +382,33 @@ class CreateToolTip(object):
 		self.tw.wm_overrideredirect(True)
 		self.tw.wm_geometry("+%d+%d" % (x, y))
 		label = Label(self.tw, text=self.text, justify='left',
-					   background='yellow', relief='solid', borderwidth=1,
-					   font=("times", "8", "normal"))
+					background="#ffffff", relief='solid', borderwidth=1,
+					wraplength = self.wraplength)
 		label.pack(ipadx=1)
 
-	def close(self, event=None):
-		if self.tw:
-			self.tw.destroy()
+	def hidetip(self):
+		tw = self.tw
+		self.tw= None
+		if tw:
+			tw.destroy()
+
+class AutomationTool_BottomPanel(Frame):
+	
+	def __init__(self, master):
+		Frame.__init__(self, master) 
+		self.pack(side=BOTTOM, fill=X)          # resize with parent
+		
+		# separator widget
+		#Separator(orient=HORIZONTAL).grid(in_=self, row=0, column=1, sticky=E+W, pady=5)
+		Row = 1
+		Label(text='TC file:', width=15).grid(in_=self, row=Row, column=1, padx=5, pady=5, sticky=W)
+		#Label(textvariable=master.VersionStatus, width=15).grid(in_=self, row=Row, column=2, padx=0, pady=5, sticky=W)
+		#master.VersionStatus.set('-')
+
+		Label(text='Connection status:', width=15).grid(in_=self, row=Row, column=3, padx=5, pady=5)
+		#Label(textvariable=master._update_day, width=15).grid(in_=self, row=Row, column=4, padx=0, pady=5)
+		#master._update_day.set('-')
+	
+		
+		self.rowconfigure(0, weight=1)
+		self.columnconfigure(0, weight=1)			
