@@ -30,16 +30,18 @@ from tkinter.ttk import Entry, Label, Style, Treeview, Scrollbar
 from tkinter.ttk import Checkbutton, OptionMenu, Notebook
 from xml.dom.expatbuilder import parseFragmentString
 
-
+import importlib.machinery
+import importlib.util
 
 #from tkinter import style
 
 from openpyxl import load_workbook
 
 
-from libs.general_function import *
+#from libs.general_function import *
 # Function use for the action builder here
 from libs.automation_driver import Automation as Tester
+from libs.automation_driver import *
 
 from ppadb.client import Client as AdbClient
 
@@ -53,8 +55,8 @@ import pytesseract
 CWD = os.path.abspath(os.path.dirname(sys.argv[0]))
 ADBPATH = '\"' + CWD + '\\adb\\adb.exe' + '\"'
 #MyTranslatorAgent = 'google'
-Tool = "Automation Execuser"
-VerNum = '0.3.0d'
+Tool = "Auto Tester"
+VerNum = ' 1.0.1c '
 version = Tool  + " " +  VerNum
 DELAY1 = 20
 DELAY2 = 100
@@ -122,51 +124,49 @@ class Automation_Execuser(Frame):
 		self.init_UI()
 		self.init_UI_Data()
 
-		
 		'''
 		try:
 			print('Start server')
 			os.popen( ADBPATH + ' start-server')
-			app_name = 'android_touch'
-			print('Get CPU profile')
+			#app_name = 'android_touch'
+			#print('Get CPU profile')
 			#self.CPU = os.popen(ADBPATH + ' shell getprop ro.product.cpu.abi').read()
-			process = subprocess.Popen(ADBPATH + ' shell getprop ro.product.cpu.abi', stdout=subprocess.PIPE, stderr=None, shell=True)
-			CPU = process.communicate()[0].decode("utf-8") 
-			CPUFamily = CPU.replace('\r\n', "")
-			print('CPU family: ', CPUFamily)
+			#process = subprocess.Popen(ADBPATH + ' shell getprop ro.product.cpu.abi', stdout=subprocess.PIPE, stderr=None, shell=True)
+			#CPU = process.communicate()[0].decode("utf-8") 
+			#CPUFamily = CPU.replace('\r\n', "")
+			#print('CPU family: ', CPUFamily)
 			self.port = 0
-			if CPUFamily != "":
-				print('Push touch to device')
-				if (os.path.isfile(CWD + '\\libs\\arm64-v8a\\touch')):
-					print('file available')
-				str_command = '%s push \"%s\\libs\\%s\\touch\" /data/local/tmp' % (ADBPATH, CWD, CPUFamily)
-				print('Command:', str_command)
-				os.system(str_command)
-				print('Launch touch on device')
-				os.system(ADBPATH + ' shell chmod 755 /data/local/tmp/touch') 
-				os.system(ADBPATH + ' shell /data/local/tmp/touch')
-				print('Looking for port')
-				for port in range(50000,65535):
-					self.port = port
-					process = subprocess.Popen(ADBPATH + ' forward tcp:8080 tcp:' + str(self.port), stdout=subprocess.PIPE, stderr=None, shell=True)
-					return_message = process.communicate()
-					for message in return_message:
-						if message != None:
-							str_message = message.decode("utf-8") 
-							if str_message == self.port:
-								break
-		 
-					print('str_message', str_message)
-					return_port = str_message.replace('\r\n', "")
-					print('return_port', return_port)
-					if return_port == self.port:
-						break
+			#if CPUFamily != "":
+			#print('Push touch to device')
+			#if (os.path.isfile(CWD + '\\libs\\arm64-v8a\\touch')):
+			#	print('file available')
+			#str_command = '%s push \"%s\\libs\\%s\\touch\" /data/local/tmp' % (ADBPATH, CWD, CPUFamily)
+			#print('Command:', str_command)
+			#os.system(str_command)
+			print('Launch touch on device')
+			os.system(ADBPATH + ' shell chmod 755 /data/local/tmp/touch') 
+			os.system(ADBPATH + ' shell /data/local/tmp/touch')
+			print('Looking for port')
+			for port in range(50000,65535):
+				self.port = port
+				process = subprocess.Popen(ADBPATH + ' forward tcp:9889 tcp:' + str(self.port), stdout=subprocess.PIPE, stderr=None, shell=True)
+				return_message = process.communicate()
+				for message in return_message:
+					if message != None:
+						str_message = message.decode("utf-8") 
+						if str_message == self.port:
+							break
+		
+				#print('str_message', str_message)
+				return_port = str_message.replace('\r\n', "")
+				#print('return_port', return_port)
+				if return_port == self.port:
+					break
 			print('Current port:', self.port)
 
 		except Exception as e:
 			print('Error:', e)
 		'''
-		
 		#print('Get device serial')
 		#self.Get_Serial()
 		self.parent.bind('<Control-l>', self.Btn_Browse_Test_Case_File)
@@ -359,6 +359,8 @@ class Automation_Execuser(Frame):
 
 		Row+=1
 		Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['AddStep'], command= self.add_treeview_row).grid(row=Row, column=10,padx=5, pady=0, sticky=W)
+		#Row+=1
+		#Button(Tab, width = self.Button_Width_Half, text=  'Browse Module', command= self.Browse_Module).grid(row=Row, column=10,padx=5, pady=0, sticky=W)
 
 		#Row+=1
 		#Button(Tab, width = self.Button_Width_Half, text=  "Move Up", command= self.move_treeview_up).grid(row=Row, column=10,padx=5, pady=0, sticky=W)
@@ -497,6 +499,8 @@ class Automation_Execuser(Frame):
 		filename = filedialog.askopenfilename(title =  self.LanguagePack.ToolTips['SelectSource'], filetypes = (("Workbook files", "*.xlsx *.xlsm, *.csv"), ), multiple = False)	
 		if filename != "":
 			self.DB_Path = self.CorrectPath(filename)
+			self.DB_Folder = os.path.dirname(self.DB_Path)
+			Init_Folder(self.DB_Folder)
 			self.Text_DB_Path.set(self.DB_Path)
 			
 			self.AppConfig.Save_Config(self.AppConfig.Auto_Tool_Config_Path, 'AUTO_TOOL', 'db_path', self.DB_Path, True)
@@ -516,7 +520,7 @@ class Automation_Execuser(Frame):
 			self.WorkingResolution = 1080
 		
 		self.AppConfig.Save_Config(self.AppConfig.Auto_Tool_Config_Path, 'AUTO_TOOL', 'resolution', _resolution_index)
-
+		self.AutoTester.Update_Resolution(self.WorkingResolution)
 		self.Write_Debug(self.LanguagePack.ToolTips['SetResolution'] + str(self.WorkingResolution) + 'p')
 
 	def Auto_Setting_Set_Working_Language(self, select_value):
@@ -572,8 +576,6 @@ class Automation_Execuser(Frame):
 				return
 			self.TextSerial.set_completion_list(Serrial)
 			self.TextSerial.set(Serrial[0])
-			self.AutoTester.Update_Serial_Number(Serrial[0])
-			
 			self.AutoTester.Update_Serial_Number(Serrial[0])
 		except:	
 			pass
@@ -659,15 +661,7 @@ class Automation_Execuser(Frame):
 		self.Debugger.delete('1.0', END)
 		return
 
-	def Get_Test_Info(self):
-		Test_Case = self.Str_Test_Case_Path.get()
-		All = Function_Import_TestCase(Test_Case)
-		TestInfo = All['Info']
-		for Key in TestInfo:
-			self.Debugger.insert("end", "\n\r")
-			self.Debugger.insert("end", str(Key) + ':' + str(TestInfo[Key]))
-			self.Debugger.yview(END)	
-		
+	
 
 ###########################################################################################
 # Treeview FUNCTION
@@ -736,10 +730,16 @@ class Automation_Execuser(Frame):
 			start = index_list[-1]+1
 			end = index_list[-1]+2
 		if self.Current_Arg_Type == None:
-			messagebox.showwarning('Warning', 'Please input the value before adding an action.')
-			return
+			this_type = self.current_action_type.get()
+			this_action = self.current_action_name.get()
+			if this_type != '' and this_action != '':
+				self.Treeview.insert('', start, text= '', values = [this_type, this_action])
+				return
+			else:	
+				messagebox.showwarning('Warning', 'Please input the value before adding an action.')
+				return
 
-		self.Treeview.insert('', start, text= '', values = self.Current_Arg_Value)
+		self.Treeview.insert('', start, text= '', values =  self.Current_Arg_Value)
 		
 		if self.Current_Arg_Type == 'Loop':
 			self.Treeview.insert('', end, text= '', values=['Loop','End Loop'])
@@ -776,8 +776,14 @@ class Automation_Execuser(Frame):
 			else:
 				end = index_list[-1]+1+len(index_list)
 		if self.Current_Arg_Type == None:
-			messagebox.showwarning('Warning', 'Please input the value before adding an action.')
-			return
+			this_type = self.current_action_type.get()
+			this_action = self.current_action_name.get()
+			if this_type != '' and this_action != '':
+				self.Treeview.insert('', start, text= '', values = [this_type, this_action])
+				return
+			else:	
+				messagebox.showwarning('Warning', 'Please input the value before adding an action.')
+				return
 		self.Treeview.insert('', start, text= '', values = self.Current_Arg_Value)
 		
 		if self.Current_Arg_Type == 'Loop':
@@ -833,93 +839,6 @@ class Automation_Execuser(Frame):
 		for i in self.Treeview.get_children():
 			self.Treeview.delete(i)
 
-	def Btn_OCR_Select_Area(self):
-		
-		if self.OCR_File_Path != None:
-			_index = random.randint(0, len(self.OCR_File_Path)-1)
-			if os.path.isfile(self.OCR_File_Path[_index]):
-				im = cv2.imread(self.OCR_File_Path[_index])
-				(_h, _w) = im.shape[:2]
-				ratio = 720 / _h
-				if ratio != 1:
-					width = int(im.shape[1] * ratio)
-					height = int(im.shape[0] * ratio)
-					dim = (width, height)
-					im = cv2.resize(im, dim, interpolation = cv2.INTER_AREA)
-
-				for row in self.Treeview.get_children():
-					child = self.Treeview.item(row)
-					im = cv2.rectangle(im, (child["values"][0], child["values"][1]), (child["values"][0] + child["values"][2], child["values"][1] + child["values"][3]), (255,0,0), 2)
-
-				location = cv2.selectROI("Sekect scan area", im, showCrosshair=False,fromCenter=False)
-				cv2.destroyAllWindows() 
-				self.Treeview.insert('', 'end', text= '', values=(str(location[0]), str(location[1]), str(location[2]), str(location[3])))
-			else:
-				self.Write_Debug(self.LanguagePack.ToolTips['SourceDocumentEmpty'])		
-		else:
-			self.Write_Debug(self.LanguagePack.ToolTips['SourceDocumentEmpty'])	
-		
-	def Btn_OCR_Select_Area_Advanced(self):
-		_scan_type = self.ScanType.get()
-
-		if self.OCR_File_Path != None:
-			_index = random.randint(0, len(self.OCR_File_Path)-1)
-			if os.path.isfile(self.OCR_File_Path[_index]):
-				im = cv2.imread(self.OCR_File_Path[_index])
-				(_h, _w) = im.shape[:2]
-				ratio = 720 / _h
-				if ratio != 1:
-					width = int(im.shape[1] * ratio)
-					height = int(im.shape[0] * ratio)
-					dim = (width, height)
-					im = cv2.resize(im, dim, interpolation = cv2.INTER_AREA)
-
-				for row in self.Treeview.get_children():
-					child = self.Treeview.item(row)
-					if _scan_type in ['Image and Text', 'DB Create', 'Text only']:
-						im = cv2.rectangle(im, (child["values"][0], child["values"][1]), (child["values"][0] + child["values"][2], child["values"][1] + child["values"][3]), (255,0,0), 2)
-					if _scan_type in ['Image and Text', 'DB Create', 'Image only']:
-						im = cv2.rectangle(im, (child["values"][4], child["values"][5]), (child["values"][4] + child["values"][6], child["values"][5] + child["values"][7]), (255,255,0), 2)
-				location = [0,0,0,0]
-				location2 = [0,0,0,0]
-				if _scan_type in ['Image and Text', 'DB Create', 'Text only']:
-					location = cv2.selectROI("Select TEXT area", im, showCrosshair=False,fromCenter=False)
-					im = cv2.rectangle(im, (location[0], location[1]), (location[0] + location[2], location[1] + location[3]), (255,0,0), 2)
-					cv2.destroyAllWindows() 
-				if _scan_type in ['Image and Text', 'DB Create', 'Image only']:
-					location2 = cv2.selectROI("Select COMPONENT area", im, showCrosshair=False,fromCenter=False)
-					cv2.destroyAllWindows() 
-				
-				self.Treeview.insert('', 'end', text= '', values=(str(location[0]), str(location[1]), str(location[2]), str(location[3]), str(location2[0]), str(location2[1]), str(location2[2]), str(location2[3]) ))
-				
-			else:
-				self.Write_Debug(self.LanguagePack.ToolTips['SourceDocumentEmpty'])		
-		else:
-			self.Write_Debug(self.LanguagePack.ToolTips['SourceDocumentEmpty'])				
-
-	def Btn_OCR_Input_Text_Area(self):
-
-		self.Focused_Item = self.Treeview.focus()
-		child = self.Treeview.item(self.Focused_Item)
-		
-		
-
-		_x = self.Str_CenterX.get("1.0", END).replace('\n', '')
-		if _x == '': _x = 0
-		_y = self.Str_CenterY.get("1.0", END).replace('\n', '')
-		if _y == '': _y = 0
-		_w = self.Str_Weight.get("1.0", END).replace('\n', '')
-		if _w == '': _w = 0
-		_h = self.Str_Height.get("1.0", END).replace('\n', '')
-		if _h == '': _h = 0
-		
-		if self.Region_Type.get() == 1:
-			self.Treeview.insert('', 'end', text= '', values=(str(int(_x)), str(int(_y)), str(int(_w)), str(int(_h)), child["values"][4], child["values"][5], child["values"][6], child["values"][7]))
-		else:
-			self.Treeview.insert('', 'end', text= '', values=(child["values"][0], child["values"][1], child["values"][2], child["values"][3], str(int(_x)), str(int(_y)), str(int(_w)), str(int(_h))))
-
-		#self.Update_Treeview_Advanced_UI()
-
 	def Treeview_Deselect_Row(self, event):
 		'''
 		Function activate when double click an entry from Treeview
@@ -956,28 +875,6 @@ class Automation_Execuser(Frame):
 		#self.popup.add_separator()
 		#self.popup.add_command(label="Exit", command=lambda: self.closeWindow())
 
-
-	def Btn_OCR_Update_Area(self):
-
-		if self.Focused_Item != None:
-			child = self.Treeview.item(self.Focused_Item)
-			_x = self.Str_CenterX.get("1.0", END).replace('\n', '')
-			if _x == '': _x = 0
-			_y = self.Str_CenterY.get("1.0", END).replace('\n', '')
-			if _y == '': _y = 0
-			_w = self.Str_Weight.get("1.0", END).replace('\n', '')
-			if _w == '': _w = 0
-			_h = self.Str_Height.get("1.0", END).replace('\n', '')
-			if _h == '': _h = 0
-			
-			if self.Region_Type.get() == 1:
-				self.Treeview.item(self.Focused_Item, text="", values=(str(int(_x)), str(int(_y)), str(int(_w)), str(int(_h)), child["values"][4], child["values"][5], child["values"][6], child["values"][7]))
-			else:
-				self.Treeview.item(self.Focused_Item, text="", values=(child["values"][0], child["values"][1], child["values"][2], child["values"][3], str(int(_x)), str(int(_y)), str(int(_w)), str(int(_h))))
-
-
-			#self.Treeview.item(self.Focused_Item, text="", values=(child["values"]))
-			self.Focused_Item = None
 	
 	def Update_Execute_List(self):
 		print('Update execution list.')
@@ -1059,7 +956,7 @@ class Automation_Execuser(Frame):
 					arg_data['variable_type'] = temp_Variable_type
 					arg_data['input_require'] = False
 				
-				if arg_data['variable_type'] in ['string', 'int']:
+				if arg_data['variable_type'] in ['string', 'int', 'float']:
 					arg_data['widget'] = Text(child_windows, height = 1, width=30)
 					arg_data['widget'].grid(row=row,column=2, padx=10, pady=10, sticky=S)
 				elif arg_data['variable_type'] == 'string_id':
@@ -1101,7 +998,17 @@ class Automation_Execuser(Frame):
 						btn_status = DISABLED
 					arg_data['button'] = Button(child_windows, text = 'Select', command = lambda val=arg_data['widget']: self.Btn_Select_Area(val), state=btn_status)
 					arg_data['button'].grid(row=row,column=3, padx=10, pady=10, sticky=E)
-
+				
+				elif arg_data['variable_type'] == 'current_area':
+					arg_data['widget'] = Text(child_windows, height = 1, width=30)
+					arg_data['widget'].grid(row=row,column=2, padx=10, pady=10, sticky=S)
+					if self.AutoTester.Device != None:
+						btn_status = NORMAL
+					else:
+						btn_status = DISABLED
+					arg_data['button'] = Button(child_windows, text = 'Select', command = lambda val=arg_data['widget']: self.Btn_Crop_Area(val), state=btn_status)
+					arg_data['button'].grid(row=row,column=3, padx=10, pady=10, sticky=E)
+				
 				else:
 					Label(child_windows, text= 'N/A').grid(row=row,column=2, padx=10, pady=10, sticky=S)
 				arg_data_list.append(arg_data)
@@ -1136,7 +1043,10 @@ class Automation_Execuser(Frame):
 		value_array = []
 		button_array = []
 		arg_data_list = []
+		child = self.Treeview.item(treeview_node)
+		value = child['values']
 		if len(arg_name) > 0:
+			value_index=  2
 			for arg in arg_name:
 				arg_data = {}
 				arg_data['variable_type'] = None
@@ -1158,9 +1068,15 @@ class Automation_Execuser(Frame):
 					arg_data['variable_type'] = temp_Variable_type
 					arg_data['input_require'] = False
 				
-				if arg_data['variable_type'] in ['string', 'int']:
+				if arg_data['variable_type'] in ['string', 'int', 'float']:
 					arg_data['widget'] = Text(child_windows, height = 1, width=30)
 					arg_data['widget'].grid(row=row,column=2, padx=10, pady=10, sticky=S)
+					try:	
+						arg_data['widget'].insert("end", value[value_index])
+					except Exception as e:
+						print('Error while adding string value:', e)
+						pass	
+
 				elif arg_data['variable_type'] == 'string_id':
 					arg_data['value_variable'] = StringVar()
 					value_list = [*self.AutoTester.UI]
@@ -1171,6 +1087,12 @@ class Automation_Execuser(Frame):
 					arg_data['widget'].set_completion_list(value_list)
 					arg_data['widget'].Set_Entry_Width(35)
 					arg_data['widget'].grid(row=row,column=2, padx=10, pady=10, sticky=W+S)
+					try:	
+						arg_data['widget'].set(value[value_index])
+					except Exception as e:
+						print('Error while adding list value:', e)
+						pass
+					
 				elif arg_data['variable_type'] == 'user_list':
 					#self.Execute_List_values
 					arg_data['value_variable'] = StringVar()
@@ -1181,6 +1103,12 @@ class Automation_Execuser(Frame):
 					arg_data['widget'].set_completion_list(value_list)
 					arg_data['widget'].Set_Entry_Width(35)
 					arg_data['widget'].grid(row=row,column=2, padx=10, pady=10, sticky=S)
+					try:
+						
+						arg_data['widget'].set(value_list[value[value_index]])
+					except Exception as e:
+						print('Error while adding user list value:', e)
+						pass
 				elif arg_data['variable_type'] == 'point':
 					arg_data['widget'] = Text(child_windows, height = 1, width=30)
 					arg_data['widget'].grid(row=row,column=2, padx=10, pady=10, sticky=W+S)
@@ -1190,7 +1118,11 @@ class Automation_Execuser(Frame):
 						btn_status = DISABLED
 					arg_data['button'] = Button(child_windows, text = 'Select', command = lambda val=arg_data['widget']: self.Btn_Select_Point(val), state=btn_status)
 					arg_data['button'].grid(row=row,column=3, padx=10, pady=10, sticky=E)
-
+					try:
+						arg_data['widget'].insert("end", value[value_index])
+					except Exception as e:
+						print('Error while adding point value:', e)
+						pass
 				elif arg_data['variable_type'] == 'area':
 					arg_data['widget'] = Text(child_windows, height = 1, width=30)
 					arg_data['widget'].grid(row=row,column=2, padx=10, pady=10, sticky=S)
@@ -1200,31 +1132,73 @@ class Automation_Execuser(Frame):
 						btn_status = DISABLED
 					arg_data['button'] = Button(child_windows, text = 'Select', command = lambda val=arg_data['widget']: self.Btn_Select_Area(val), state=btn_status)
 					arg_data['button'].grid(row=row,column=3, padx=10, pady=10, sticky=E)
+					try:
+						arg_data['widget'].insert("end", value[value_index])
+					except Exception as e:
+						print('Error while adding area value:', e)
+						pass
+
+				elif arg_data['variable_type'] == 'current_area':
+					arg_data['widget'] = Text(child_windows, height = 1, width=30)
+					arg_data['widget'].grid(row=row,column=2, padx=10, pady=10, sticky=S)
+					if self.AutoTester.Device != None:
+						btn_status = NORMAL
+					else:
+						btn_status = DISABLED
+					arg_data['button'] = Button(child_windows, text = 'Select', command = lambda val=arg_data['widget']: self.Btn_Crop_Area(val), state=btn_status)
+					arg_data['button'].grid(row=row,column=3, padx=10, pady=10, sticky=E)
+					try:
+						arg_data['widget'].insert("end", value[value_index])
+					except Exception as e:
+						print('Error while adding custom area value:', e)
+						pass
 
 				else:
 					Label(child_windows, text= 'N/A').grid(row=row,column=2, padx=10, pady=10, sticky=S)
 				arg_data_list.append(arg_data)
 				row +=1
+				value_index+=1
 		child_windows.protocol("WM_DELETE_WINDOW", lambda c=child_windows,x= this_type, y= this_action,i=treeview_node, a=arg_data_list: self.Modify_Input_Value_On_Closing(c,a,x, y, i))		
 		Button(child_windows, text = 'Set value', command = lambda c=child_windows,x= this_type, y= this_action,i=treeview_node, a=arg_data_list: self.Modify_Input_Value_On_Closing(c,a,x, y, i)).grid(row=row,column=2, padx=10, pady=10, sticky=E)
 
 	def Btn_Select_Area(self, text_widget):
-		im = self.AutoTester.Get_Current_Screenshot()
-		image = cv2.imdecode(np.frombuffer(im, np.uint8), cv2.IMREAD_COLOR)
-		location = cv2.selectROI("Sekect scan area", image, showCrosshair=False,fromCenter=False)
+		im = self.AutoTester.Get_Screenshot_In_Working_Resolution()
+		show_im = self.Resize_Image_by_ratio(im, 0.5)
+		#image = cv2.imdecode(np.frombuffer(im, np.uint8), cv2.IMREAD_COLOR)
+		location = cv2.selectROI("Sekect scan area", show_im, showCrosshair=False,fromCenter=False)
 		area = {}
-		area['x'] = location[0]
-		area['y'] = location[1]
-		area['w'] = location[2]
-		area['h'] = location[3]
+		area['x'] = 2*location[0]
+		area['y'] = 2*location[1]
+		area['w'] = 2*location[2]
+		area['h'] = 2*location[3]
 		cv2.destroyAllWindows()
+		text_widget.delete('1.0', END)	
 		text_widget.insert("end", json.dumps(area))
+
+	def Btn_Crop_Area(self, text_widget):
+		im = self.AutoTester.Get_Screenshot_In_Working_Resolution()
+		show_im = self.Resize_Image_by_ratio(im, 0.5)
+		#im = cv2.cvtColor(im , cv2.COLOR_BGR2RGB)
+		#im = cv2.imdecode(np.frombuffer(im, np.uint8), cv2.IMREAD_COLOR)
+		area = cv2.selectROI("Sekect scan area", show_im, showCrosshair=False,fromCenter=False)
+		imCrop = im[int(2*area[1]):int(2*area[1]+2*area[3]), int(2*area[0]):int(2*area[0]+2*area[2])]
+		
+		cv2.destroyAllWindows()
+		#cv2.imshow(' ', imCrop)
+		#cv2.waitKey(0)
+		out_dir = self.DB_Folder + '\\temp_img'
+		Init_Folder(out_dir)
+		_name = out_dir   + '\\img_' + str(Function_Get_TimeStamp()) + '.png'	
+		cv2.imwrite(_name, imCrop)
+		text_widget.delete('1.0', END)	
+		text_widget.insert("end", _name)	
 
 	def Btn_Select_Point(self, text_widget):
 		self.temp_widget = text_widget
-		im = self.AutoTester.Get_Current_Screenshot()
-		image = cv2.imdecode(np.frombuffer(im, np.uint8), cv2.IMREAD_COLOR)
-		cv2.imshow('Screen', image)
+		im = self.AutoTester.Get_Screenshot_In_Working_Resolution()
+		show_im = self.Resize_Image_by_ratio(im, 0.5)
+		#image = cv2.imdecode(np.frombuffer(im, np.uint8), cv2.IMREAD_COLOR)
+		cv2.imshow('Screen', show_im)
 		cv2.setMouseCallback('Screen', self.click_event)
 		cv2.waitKey(0)
 		cv2.destroyAllWindows()
@@ -1240,10 +1214,21 @@ class Automation_Execuser(Frame):
 				# on the Shell
 				self.temp_widget.delete('1.0', END)	
 				point = {}
-				point['x'] = x
-				point['y'] = y
+				point['x'] = 2*x
+				point['y'] = 2*y
 				cv2.destroyAllWindows()
+				self.temp_widget.delete('1.0', END)	
 				self.temp_widget.insert("end", json.dumps(point)) 
+
+	def Resize_Image_by_ratio(self, img, ratio):
+		
+		if ratio != 1:
+			width = int(img.shape[1] * ratio)
+			height = int(img.shape[0] * ratio)
+			dim = (width, height)
+			img = cv2.resize(img, dim, interpolation = cv2.INTER_AREA)
+		
+		return img
 
 	def Store_Input_Value_On_Closing(self,child_windows, arg_data_list):
 		this_type = self.current_action_type.get()
@@ -1254,7 +1239,7 @@ class Automation_Execuser(Frame):
 			temp_value = None
 			if arg_data['variable_type'] == None:
 				temp_value = ''
-			elif arg_data['variable_type'] in ['string', 'int']:
+			elif arg_data['variable_type'] in ['string', 'int', 'float']:
 				temp_value = arg_data['widget'].get("1.0", END).replace('\n', '')
 				
 			elif arg_data['variable_type'] == 'string_id':
@@ -1269,6 +1254,8 @@ class Automation_Execuser(Frame):
 					
 			elif arg_data['variable_type'] == 'area':
 				temp_value = arg_data['widget'].get("1.0", END).replace('\n', '')
+			elif arg_data['variable_type'] == 'current_area':
+				temp_value = arg_data['widget'].get("1.0", END).replace('\n', '')	
 			elif arg_data['variable_type'] == 'list':
 				temp_value = []
 				
@@ -1293,7 +1280,7 @@ class Automation_Execuser(Frame):
 			temp_value = None
 			if arg_data['variable_type'] == None:
 				temp_value = ''
-			elif arg_data['variable_type'] in ['string', 'int']:
+			elif arg_data['variable_type'] in ['string', 'int', 'float']:
 				temp_value = arg_data['widget'].get("1.0", END).replace('\n', '')
 				
 			elif arg_data['variable_type'] == 'string_id':
@@ -1307,6 +1294,8 @@ class Automation_Execuser(Frame):
 					
 					
 			elif arg_data['variable_type'] == 'area':
+				temp_value = arg_data['widget'].get("1.0", END).replace('\n', '')
+			elif arg_data['variable_type'] == 'current_area':
 				temp_value = arg_data['widget'].get("1.0", END).replace('\n', '')
 			elif arg_data['variable_type'] == 'list':
 				temp_value = []
@@ -1336,6 +1325,7 @@ class Automation_Execuser(Frame):
 	# Other function
 	
 	def Update_Action_List(self):
+
 		print('Update action list to drop list')
 		action_type = ['Action', 'Loop', 'Condition', 'Get_Result', 'Update_Variable']
 		action_type.sort()
@@ -1345,6 +1335,43 @@ class Automation_Execuser(Frame):
 		for action in self.AutoTester.action_list:
 			if action['type'] in action_type:
 				self.action_dict[action['type']][action['name']] = action['arg']
+
+	def ismodulefunction(self, module, member):
+			module_member = getattr(module, member)
+			member_type = type(module_member).__name__
+			return member_type == "function" or member_type == "builtin_function_or_method"
+
+	def Browse_Module(self):
+		#need to run again in main Automation lib
+		from inspect import getmembers, isfunction
+		print('Enter lib path:')
+		path = r'C:\Users\Evan\OneDrive\Documents\GitHub\Evn-Automation-tool\libs\New Python File.py'
+		
+		loader = importlib.machinery.SourceFileLoader( 'mymodule', path)
+		spec = importlib.util.spec_from_loader( 'mymodule', loader )
+		mymodule = importlib.util.module_from_spec( spec )
+		loader.exec_module( mymodule)
+		all_f = dir(mymodule)
+		new_f = []
+		for mymodule_name in all_f:
+			if not mymodule_name.startswith('__'):
+				new_f.append(mymodule_name)
+		for function in new_f:
+			real_f = getattr(mymodule, function)
+			a = real_f()
+			setattr(self.AutoTester, real_f.__name__, getattr(a, 'func'))
+			self.AutoTester.append_action_list(type = 'Action', name = real_f.__name__ , argument = a.kwarg, description= '')
+
+		print('Update action list to drop list')
+		action_type = ['Action', 'Loop', 'Condition', 'Get_Result', 'Update_Variable']
+		action_type.sort()
+		self.action_dict = {}
+		for type in action_type:
+			self.action_dict[type] = {}
+		for action in self.AutoTester.action_list:
+			if action['type'] in action_type:
+				self.action_dict[action['type']][action['name']] = action['arg']	
+				
 			
 	def Update_Action_Name(self, event=None):
 		menu = self.action_name["menu"]
@@ -1559,18 +1586,21 @@ class Automation_Execuser(Frame):
 		self.TesseractDataPath.set(_tesseract_data_path)
 
 		_db_path = self.Configuration['AUTO_TOOL']['db_path']
+		
+		self.DB_Folder = os.path.dirname(_db_path)
+		Init_Folder(self.DB_Folder)
+		self.DB_Path = _db_path
 		if not os.path.isfile(_db_path):
 			with open(_db_path, 'w', newline='') as csvfile:
 				fieldnames = ['StringID', 'String_EN', 'String_KO', 'Path']
 				writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 				writer.writeheader()
 			self.AppConfig.Save_Config(self.AppConfig.Auto_Tool_Config_Path, 'AUTO_TOOL', 'db_path', _db_path, True)
+			self.Text_DB_Path.set(_db_path)
+			self.DB_Path = _db_path
 		
 		self.Text_DB_Path.set(_db_path)
-		self.DB_Path = _db_path
-		
 		self.Execute_List_header = ['Name', 'Value_1', 'Type_1', 'Value_2', 'Type_2', 'Value_3', 'Type_3', 'Value_4', 'Type_4', 'Value_5', 'Type_5', 'Value_6', 'Type_6']
-
 		self.Execute_List_values = None
 
 	def init_UI_Data(self):
@@ -1587,6 +1617,11 @@ class Automation_Execuser(Frame):
 
 		_resolution = self.Configuration['AUTO_TOOL']['resolution']
 		self.Resolution.set(_resolution)
+		if _resolution == 1:
+			resolution = 720
+		else:
+			resolution = 1080 
+		self.AutoTester.Update_Resolution(resolution)
 
 		self.Update_Action_List()
 		self.Get_Serial()
@@ -1869,98 +1904,31 @@ def Function_Execute_Script(
 
 	#os.system( ADBPATH + ' forward tcp:9889 tcp:9889')
 
+	if TestCaseObject == None or len(TestCaseObject) == 0:
+		Status_Queue.put('No action is added')
+		return
+
+	result, total = AutoTester.Function_Generate_TestCase(TestCaseObject, Execute_List)
+	print('Generate testcase:')
+	Status_Queue.put('Len of test cases: ' + str(len(TestCaseObject)))
+	Status_Queue.put('Leng of real test case: '+  str(len(result)))
+
+	#index = 0
+	#for block in result:
+		#index+=1
+		#print('Block:', index, str(block))
+	
+	
 	Connect_Status = AutoTester.Check_Connectivity()
 	if Connect_Status == False:
 		Status_Queue.put('Device is not connected.')
-		#return
-
-	if TestCaseObject == None or TestCaseObject == []:
-		Status_Queue.put('No action is added')
 		return
-	else:
-		# Generate Testcase from TestCaseObject	
-		print("WIP")
-	result, total = AutoTester.Function_Generate_TestCase(TestCaseObject, Execute_List)
-	print('Generate testcase:')
-	Status_Queue.put('Len of test case: ' + str(len(result)))
-	index = 0
-	for block in result:
-		index+=1
-		print('Block:', index, str(block))
-	print('Leng of real test case: ', index)	
+
 	AutoTester.Function_Execute_Block(Status_Queue, Progress_Queue, Result_Queue, result)
 		
-	
-	#AutoTester.Function_Execute_TestCase(TestCaseObject)	
-	# Update TestCaseObject structure:
-	'''
-	estCase = TestCaseObject['Testcase']
-	TestInfo = TestCaseObject['Info']
-	for detail in TestInfo:
-		Status_Queue.put( detail +': '+ str(TestInfo[detail]))
-	
-	#AutoTester.Count_Object('UI_Inventory')
-	Test_Type = TestInfo['Type']
-	
-	if Test_Type == 'GachaTest':
-		Data = TestCaseObject['Data']
-		Status_Queue.put('Update Gacha Pool')
-		AutoTester.Update_Gacha_Pool(DB_Path, TestInfo['Category'], Data)
-	
-	elif Test_Type in ['ListAutoTest', 'ListManualTest']:
-		Data = TestCaseObject['Data']
-		print('Data sheet:', Data)
-		Status_Queue.put('Update Execution List')
-		AutoTester.Update_Execution_List(Data)
-		AutoTester.Update_Execution_Value(Execute_Value)
-
-	else:
-		#Default type = General
-		pass
-
-	Status_Queue.put('Execute test case')
-	Start = time.time()
-	if Test_Type == 'ListAutoTest':
-		print('List data:', AutoTester.Execution_List)
-		for current_execute_value in AutoTester.Execution_List:
-			print('Current value:', current_execute_value)
-			AutoTester.Update_Execution_Value(current_execute_value)
-			Function_Execute_TestCase(TestCase, AutoTester, Test_Case_Path, Result_Folder_Path, Test_Type, Status_Queue)
-		Result = True
-	else:
-		Result = Function_Execute_TestCase(TestCase, AutoTester, Test_Case_Path, Result_Folder_Path, Test_Type, Status_Queue)
-
-	if Result == True:
-		Status_Queue.put('Test is completed')
-	else:
-		Status_Queue.put('Fail to execute the test')	
-	
-	'''
-	
 	End = time.time()
 	Status_Queue.put('Total testing time: ' + str(int(End-Start)) + " seconds.")	
-	#AutoTester = V4Test(Status_Queue, Serial_Nummber, DB_Path)
-	#AutoTester.Wait_For_Item('UI_BurgerMenu')
 
-def Function_Generate_Testcase(
-		Status_Queue, Result_Queue, DB_Path, Test_Case_Path, **kwargs
-):
-	if not os.path.isfile(Test_Case_Path):
-		Status_Queue.put("Testcase is not exist")
-		return
-		
-	All = Function_Import_TestCase(Test_Case_Path)
-	
-	TestCase = All['Testcase']
-	TestInfo = All['Info']
-	print('StringID:',TestInfo['StringID'])
-	Data = Function_Import_Data(Test_Case_Path, TestInfo['StringID'])
-	All['Data'] = Data
-	print('Data:', Data)
-	for detail in TestInfo:
-		Status_Queue.put( detail +': '+ str(TestInfo[detail]))
-	Result_Queue.put(All)
-	return
 
 ###########################################################################################
 def fixed_map(style, option):
@@ -2002,8 +1970,7 @@ def main():
 		root.mainloop() 
 	except Exception as e:
 		root.withdraw()
-		messagebox.showinfo(title='Critical error', message=e)
-		
+		messagebox.showerror(title='Critical error', message=e)
 		if Windows != None:
 			Windows.destroy()	
 			

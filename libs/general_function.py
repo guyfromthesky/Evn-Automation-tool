@@ -328,6 +328,7 @@ def Sleep(total_miliseconds):
 
 def tap(Device, x, y):
 	command = "input tap " + str(x) + " " + str(y)
+	print('Tap:', command)
 	Device.shell(command)
 	return
 
@@ -458,14 +459,22 @@ def Search_Best_Match(Img_Screenshot, Img_Template, Match_Rate=0.9):
 def Search_All_Object(Img_Screenshot, Img_Template, Match_Rate=0.9):
 
 	Start = time.time()
-
-	template = cv2.cvtColor(Img_Template, cv2.IMREAD_COLOR)
+	print('Img_Template', Img_Template)
+	template = cv2.imread(Img_Template)
+	#template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+	#template = cv2.Canny(template, 50, 200)
+	##cv2.imshow('',template )
+	#cv2.waitKey(0)
+	#template = cv2.cvtColor(template, cv2.IMREAD_COLOR)
 	template = cv2.Canny(template, 50, 200)
+	#template  = cv2.imdecode(template , cv2.COLOR_BGR2GRAY)
 	(tH, tW) = template.shape[:2]
 	
-	image = np.asarray(Img_Screenshot)
-	gray = cv2.imdecode(image, cv2.IMREAD_COLOR)
-	
+	#image = np.asarray(Img_Screenshot)
+	#gray = cv2.imdecode(Img_Screenshot, cv2.IMREAD_COLOR)
+	gray = cv2.cvtColor(Img_Screenshot, cv2.COLOR_BGR2GRAY)
+	#cv2.imshow('',gray )
+	#cv2.waitKey(0)
 	Found = None
 	Results = []
 	for scale in np.linspace(0.2, 1.0, 20)[::-1]:
@@ -492,7 +501,8 @@ def Search_All_Object(Img_Screenshot, Img_Template, Match_Rate=0.9):
 	print(Message)
 
 	if len(Results) > 0:
-		return Results
+		print('Found')
+		return True
 	else:
 		return False	
 
@@ -543,9 +553,6 @@ def Count_Object(Img_Screenshot, Img_Template, Match_Rate=0.50):
 	template = cv2.cvtColor(Img_Template, cv2.COLOR_BGR2GRAY)
 	#template = cv2.Canny(template, 50, 200)
 	(tH, tW) = template.shape[:2]
-
-	
-	
 	#image = cv2.bitwise_not(Img_Screenshot)
 	gray = cv2.cvtColor(Img_Screenshot, cv2.COLOR_BGR2GRAY)
 	#cv2.imshow("template", template)
@@ -628,6 +635,7 @@ def Init_Folder(FolderPath):
 	if not os.path.isdir(FolderPath):
 		try:
 			os.mkdir(FolderPath)
+			print('Create new folder:', FolderPath)
 		except OSError:
 			print ("Creation of the directory %s failed" % FolderPath)
 
@@ -643,99 +651,6 @@ def Split_Path(Path):
 	return [Outputdir, sourcename, ext]
 
 ################################################################################################################
-
-def Function_Execute_TestCase(TestSteps, Controller, TestCase_Path, Result_Path, Test_Type, Status_Queue):
-	
-	preflix = 'Controller' + '.'	
-	ResultComment = []
-	Export_Result = []
-
-
-	for Step in TestSteps:
-		Result = None
-		Stepname = preflix + Step['Name']
-		if Step['Name'] != "Loop":
-			Arg = Step['Argument']
-			TempArg = []
-			for temp_arg in Arg:
-				TempArg.append('\"' + str(temp_arg) + '\"')
-
-			TempArg = str(','.join(TempArg))
-			if len(Arg) > 0:
-				toEval = Stepname + '(' + str(TempArg) + ')'
-			else:
-				toEval = Stepname + '()'	
-			Status_Queue.put(str("Execute function: " + Stepname))
-			Result = eval(toEval)
-			
-			if Result['Type'] == "Execute":
-				TextResult = 'Result' + str(Stepname) + ': ' + str(Result['Type'])
-				Step_Result = {}
-				Step_Result['Name'] = str(Step['Name'])
-				Step_Result['Status'] = Result['Status']
-				if 'Details' in Result:
-					Step_Result['Details'] = Result['Details'] 
-				Export_Result.append(Step_Result)
-				#TestResult = {}
-				#TestResult['Name'] = str(Step['Name'])
-				#ResultArray.append(TestResult)
-
-			elif Result['Type'] == 'Result':
-				TextResult = 'Result' + str(LStepname) + ': ' + str(Result['Type'])
-				TestResult = {}
-				TestResult['Name'] = str(Step['Name'])
-				TestResult['Detail'] = Result['Details']
-				Controller.Update_Result_Array(TestResult)
-
-			ResultComment.append(TextResult)
-
-			#Status_Queue.put(str(TextResult))
-
-		else:
-			Steps = Step['Step']
-			LoopAmount = Step['Amount']
-			for i in range(LoopAmount):
-				for LoopStep in Steps:
-					LStepname = preflix + LoopStep['Name']
-					#LArg = NewStep['Argument']
-					Arg = LoopStep['Argument']
-					TempArg = []
-					#for temp_arg in LArg:
-					for temp_arg in Arg:
-						TempArg.append('\"' + str(temp_arg) + '\"')
-					TempArg = str(','.join(TempArg))	
-					Status_Queue.put(str("Execute function: " + LStepname))
-					toEval = LStepname + '(' + TempArg + ')'
-					Result = eval(toEval)
-					if Result['Type'] == "Execute":
-						TextResult = 'Result ' + str(LStepname) + ': ' + str(Result['Status'])
-						Step_Result = {}
-						Step_Result['Name'] = str(LoopStep['Name'])
-						Step_Result['Status'] = Result['Status']
-						if 'Details' in Result:
-							Step_Result['Details'] = Result['Details'] 
-						Export_Result.append(Step_Result)
-
-					elif Result['Type'] == 'Result':
-						TextResult = 'Result ' + str(LStepname) + ': ' + str(Result['Status'])
-						TestResult = {}
-						TestResult['Name'] = str(LoopStep['Name'])
-						TestResult['Detail'] = Result['Details']
-						Controller.Update_Result_Array(TestResult)
-				
-					ResultComment.append(TextResult)
-					#CurTime = Function_Get_TimeStamp()
-					#ResultLine = CurTime + ': ' + TextResult
-					#Status_Queue.put(str(TextResult))
-		
-		#Dir, Name, Ext = Split_Path(TestCase_Path)
-
-		#Result_Path = 
-	if Test_Type not in ['ListAutoTest', 'ListManualTest']:
-		Print_Result(TestCase_Path, Export_Result, Result_Path)
-		#eval("print(Controller.Result_Array)")
-
-	return True
 
 def get_text_from_image(tess_path, tess_language, tess_data, input_image):
 	pytesseract.pytesseract.tesseract_cmd = tess_path

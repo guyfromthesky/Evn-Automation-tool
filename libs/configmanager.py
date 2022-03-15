@@ -71,7 +71,7 @@ class ConfigLoader:
 		self.Init_Config_Option(config, self.section_name, 'db_path', self.CWD + '\\DB\\db.csv', True)
 		self.Init_Config_Option(config, self.section_name, 'scan_lang', 'eng')
 		self.Init_Config_Option(config, self.section_name, 'app_lang', 'en')
-		self.Init_Config_Option_Numberic(config, self.section_name, 'resolution', 0)
+		self.Init_Config_Option_Numberic(config, self.section_name, 'resolution', 1)
 		self.Init_Config_Option(config, self.section_name, 'scan_type', "Normal")
 		
 
@@ -96,9 +96,9 @@ class ConfigLoader:
 		if Encoded == True:
 			if isinstance(Default_Value,str):
 				if len(Default_Value) > 0:
-					print('Default_Value', Default_Value)
+					#print('Default_Value', Default_Value)
 					Default_Value =  str(base64.b64encode(Default_Value.encode('utf-8')))
-					print('Default_Value', Default_Value)
+					#print('Default_Value', Default_Value)
 					Default_Value = re.findall(r'b\'(.+?)\'', Default_Value)[0]
 			
 		# Config does not have that section

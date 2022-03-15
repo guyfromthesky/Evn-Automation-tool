@@ -408,6 +408,8 @@ class LanguagePackKR:
 	Button['Pause'] = "정지시키다"
 	Button['Resume'] = "이력서"
 
+	Button['InputData'] = "데이터 삽입"
+
 	Option = {}
 	Option['TranslateFileName'] = "파일 이름 변환"
 	Option['UpdateTMFile'] = "메모리 파일 업데이트"

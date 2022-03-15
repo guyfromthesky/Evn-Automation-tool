@@ -4,7 +4,7 @@ import math
 
 
 def send_commands(commands):
-    req = urllib.request.Request('http://localhost:8080')
+    req = urllib.request.Request('http://localhost:9889')
     urllib.request.urlopen(req, json.dumps(commands).encode('utf-8'))
 	
 

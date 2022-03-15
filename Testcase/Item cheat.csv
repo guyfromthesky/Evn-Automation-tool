@@ -1,0 +1,10 @@
+Type,Action,Arg1,Arg2,Arg3,Arg4,Arg5,Arg6
+Loop,Loop List,,,,,,
+Action,Tap_Item,UI_Cheat_Console,5,,,,
+Action,Input_Current_Value,0,,,,,
+Action,Send_Enter_Key,,,,,,
+Action,Tap_Item,UI_Cheat_Console_OK,,,,,
+Action,Tap_Item,UI_Cheat_Console_OK,,,,,
+Action,Tap_Item,UI_Cheat_Console_OK,,,,,
+Action,Tap_Item,UI_Close_Console,,,,,
+Loop,End Loop,,,,,,
