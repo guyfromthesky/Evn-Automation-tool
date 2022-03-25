@@ -124,6 +124,11 @@ class Automation_Execuser(Frame):
 		self.init_UI()
 		self.init_UI_Data()
 
+		try:
+			print('Start server')
+			os.popen( 'adb start-server')
+		except Exception as e:
+			print('Error:', e)	
 		'''
 		try:
 			print('Start server')
@@ -624,14 +629,14 @@ class Automation_Execuser(Frame):
 	def Pause(self):
 		
 		_text = self.Btn_Pause.cget("text")
-		print('Text', _text)
+		#print('Text', _text)
 		if _text == self.LanguagePack.Button['Pause']:
 			self.Result_Queue.put('Pause')
 			self.Btn_Pause.configure(text=self.LanguagePack.Button['Resume'])
 			self.Btn_Pause.configure(fg='green')
 			
 		else:
-			print('Set button to Pause')
+			#print('Set button to Pause')
 			self.Result_Queue.put('Resume')
 			self.Btn_Pause.configure(text=self.LanguagePack.Button['Pause'])
 			self.Btn_Pause.configure(fg='red')
@@ -804,7 +809,7 @@ class Automation_Execuser(Frame):
 			index = self.Treeview.index(child_obj)
 			index_list.append(index)
 		index_list.sort()	
-		print(index_list)
+		#print(index_list)
 		#index = self.Treeview.index(self.Treeview.focus()) + 1
 		if len() == 1:
 			start = index_list[0]
@@ -1542,9 +1547,11 @@ class Automation_Execuser(Frame):
 
 	def on_closing(self):
 		self.parent.destroy()
-		if self.Automation_Processor.is_alive():	
-			self.Automation_Processor.terminate()
-
+		try:
+			if self.Automation_Processor.is_alive():	
+				self.Automation_Processor.terminate()
+		except:
+			pass
 		self.quit()
 
 
@@ -1588,6 +1595,7 @@ class Automation_Execuser(Frame):
 		_db_path = self.Configuration['AUTO_TOOL']['db_path']
 		
 		self.DB_Folder = os.path.dirname(_db_path)
+		print('DB folder:', self.DB_Folder)
 		Init_Folder(self.DB_Folder)
 		self.DB_Path = _db_path
 		if not os.path.isfile(_db_path):

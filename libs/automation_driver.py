@@ -434,6 +434,7 @@ class Automation:
 
 
 	def Function_Import_DB(self, DB_Path):
+
 		#self.StringID = []	
 		self.UI = {}
 		#db_dir = os.path.dirname(DB_Path)
@@ -529,7 +530,7 @@ class Automation:
 								self.UI[StringID] = MyEntry	
 			else:
 				print('Unsupported format.')					
-		print(self.UI)
+		#print(self.UI)
 
 	def Function_Merge_Path(path, folder):
 		return folder + '\\' + path
@@ -936,8 +937,9 @@ class Automation:
 			print('Waiting time:', str(Now- Start))
 			Now = time.time()
 			result = self._count_object(template_path, match_rate)
-			print('Count issue:', result)
+			#print('Count issue:', result)
 			if result != False:
+				print('wait result:', result)
 				result = self._tap_location(result)
 				return self.Generate_Result(Status = result)
 			else:
@@ -1215,8 +1217,10 @@ def Init_Folder(FolderPath):
 		try:
 			os.mkdir(FolderPath)
 			print('Create new folder:', FolderPath)
+			return True
 		except OSError:
 			print ("Creation of the directory %s failed" % FolderPath)
+			return False
 
 def Function_Get_TimeStamp():		
 	now = datetime.now()

@@ -16,6 +16,7 @@ class ConfigLoader:
 		else:
 			self.appdata = os.getcwd() + '\\AutoTester'
 		self.CWD = os.path.abspath(os.path.dirname(sys.argv[0]))
+		print('Current working directory:', self.CWD)
 		# Config file
 		self.Auto_Tool_Config_Path = self.appdata + '\\auto_tool.ini'
 
