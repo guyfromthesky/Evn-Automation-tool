@@ -1168,25 +1168,25 @@ class Automation_Execuser(Frame):
 
 	def Btn_Select_Area(self, text_widget):
 		im = self.AutoTester.Get_Screenshot_In_Working_Resolution()
-		show_im = self.Resize_Image_by_ratio(im, 0.5)
+		show_im, ratio = self.Resize_Image_by_ratio(im)
 		#image = cv2.imdecode(np.frombuffer(im, np.uint8), cv2.IMREAD_COLOR)
 		location = cv2.selectROI("Sekect scan area", show_im, showCrosshair=False,fromCenter=False)
 		area = {}
-		area['x'] = 2*location[0]
-		area['y'] = 2*location[1]
-		area['w'] = 2*location[2]
-		area['h'] = 2*location[3]
+		area['x'] = int(location[0]/ratio)
+		area['y'] = int(location[1]/ratio)
+		area['w'] = int(location[2]/ratio)
+		area['h'] = int(location[3]/ratio)
 		cv2.destroyAllWindows()
 		text_widget.delete('1.0', END)	
 		text_widget.insert("end", json.dumps(area))
 
 	def Btn_Crop_Area(self, text_widget):
 		im = self.AutoTester.Get_Screenshot_In_Working_Resolution()
-		show_im = self.Resize_Image_by_ratio(im, 0.5)
+		show_im, ratio = self.Resize_Image_by_ratio(im)
 		#im = cv2.cvtColor(im , cv2.COLOR_BGR2RGB)
 		#im = cv2.imdecode(np.frombuffer(im, np.uint8), cv2.IMREAD_COLOR)
 		area = cv2.selectROI("Sekect scan area", show_im, showCrosshair=False,fromCenter=False)
-		imCrop = im[int(2*area[1]):int(2*area[1]+2*area[3]), int(2*area[0]):int(2*area[0]+2*area[2])]
+		imCrop = im[int(area[1]/ratio):int(area[1]/ratio + area[3]/ratio), int(area[0]/ratio):int(area[0]/ratio + area[2]/ratio)]
 		
 		cv2.destroyAllWindows()
 		#cv2.imshow(' ', imCrop)
@@ -1201,14 +1201,21 @@ class Automation_Execuser(Frame):
 	def Btn_Select_Point(self, text_widget):
 		self.temp_widget = text_widget
 		im = self.AutoTester.Get_Screenshot_In_Working_Resolution()
-		show_im = self.Resize_Image_by_ratio(im, 0.5)
+		show_im, ratio = self.Resize_Image_by_ratio(im)
 		#image = cv2.imdecode(np.frombuffer(im, np.uint8), cv2.IMREAD_COLOR)
 		cv2.imshow('Screen', show_im)
 		cv2.setMouseCallback('Screen', self.click_event)
 		cv2.waitKey(0)
 		cv2.destroyAllWindows()
+		
+		point = dict()
+		point['x'] = int(self.temp_x / ratio)
+		point['y'] = int(self.temp_y / ratio)
+		self.temp_x = None
+		self.temp_y = None
+		self.temp_widget.delete('1.0', END)	
+		self.temp_widget.insert("end", json.dumps(point)) 
 		self.temp_widget = None
-
 
 	def click_event(self, event, x, y, flags, params):
 		
@@ -1218,22 +1225,40 @@ class Automation_Execuser(Frame):
 				# displaying the coordinates
 				# on the Shell
 				self.temp_widget.delete('1.0', END)	
-				point = {}
-				point['x'] = 2*x
-				point['y'] = 2*y
+				self.temp_x = x
+				self.temp_y = y
 				cv2.destroyAllWindows()
-				self.temp_widget.delete('1.0', END)	
-				self.temp_widget.insert("end", json.dumps(point)) 
+				
 
-	def Resize_Image_by_ratio(self, img, ratio):
+	def Resize_Image_by_ratio(self, img):
+		global WIDTH, HEIGHT
+		(_h, _w) = img.shape[:2]
+		_ratio = 1
+		while True:
+			temp_w = _w * _ratio
+			temp_h = _h * _ratio
+			if temp_h > HEIGHT*0.75 or temp_w > WIDTH*0.75:
+				_ratio = int(_ratio * 90)/100
+			else:
+				break
 		
-		if ratio != 1:
-			width = int(img.shape[1] * ratio)
-			height = int(img.shape[0] * ratio)
+		if _ratio != 1:
+			width = int(img.shape[1] * _ratio)
+			height = int(img.shape[0] * _ratio)
 			dim = (width, height)
 			img = cv2.resize(img, dim, interpolation = cv2.INTER_AREA)
-		
-		return img
+			#(_h, _w) = img.shape[:2]
+
+		resolution= self.WorkingResolution.get()
+		print(_h, _w, resolution)
+		if _w > _h:
+			actual_ratio = resolution / _h
+		else:
+			actual_ratio = resolution / _w
+		print(actual_ratio)	
+		actual_ratio = actual_ratio * _ratio
+		print(actual_ratio)
+		return img, actual_ratio
 
 	def Store_Input_Value_On_Closing(self,child_windows, arg_data_list):
 		this_type = self.current_action_type.get()
@@ -1951,6 +1976,7 @@ def fixed_map(style, option):
 	  elm[:2] != ('!disabled', '!selected')]
 
 def main():
+	global WIDTH, HEIGHT
 	Process_Queue = Queue()
 	Result_Queue = Queue()
 	Status_Queue = Queue()
@@ -1960,6 +1986,8 @@ def main():
 	Default_Manager = MyManager.list()
 	
 	root = Tk()
+	WIDTH = root.winfo_screenwidth()
+	HEIGHT = root.winfo_screenheight()
 	style = Style(root)
 	style.map('Treeview', foreground=fixed_map(style, 'foreground'), background=fixed_map(style, 'background'))
 

@@ -60,6 +60,8 @@ class Automation:
 		self.LoopList = False
 		self.Resolution = Resolution
 		self.Ratio = 1
+		print('Serial', Serial)
+		print('Client', self.Client)
 		if Serial != None:	
 			self.Serial = Serial
 			if self.Client != None:	
@@ -578,49 +580,93 @@ class Automation:
 
 	def Update_Action_List(self):
 		self.action_list = []
-		self.append_action_list(type = 'Action', name = 'Tap_Item', argument = {'string_id': 'string_id', 'total_attemp': 'int', 'match_rate': 'float'}, description= '')
-		self.append_action_list(type = 'Action', name = 'Tap_Location', argument = {'location': 'point'}, description= '')
-		self.append_action_list(type = 'Action', name = 'Tap', argument = {'x': 'int', 'y': 'int'}, description= '')
-		self.append_action_list(type = 'Action', name = 'Tap_Template', argument = {'image_path': 'current_area', 'total_attemp': 'int', 'match_rate': 'float'}, description= '')
-		self.append_action_list(type = 'Action', name = 'Relative_Tap', argument = {'string_id': 'string_id', 'delta_X': 'int', 'delta_Y': 'int','match_rate': 'float'}, description= '')
-		self.append_action_list(type = 'Action', name = 'Send_Tab_Key', argument = None, description= '')
-		self.append_action_list(type = 'Get_Result', name = 'Count_Object', argument = {'string_id':'string_id'}, description= '')
+
+		self.append_action_list(type = 'Action', name = 'Tap_Item', argument = {'string_id': 'string_id', 'total_attemp': 'int', 'match_rate': 'float'}, 
+			description= 'Tap an image that has been registered in the DB.')
+
+		self.append_action_list(type = 'Action', name = 'Tap_Location', argument = {'location': 'point'}, 
+			description= 'Tap on a location select on the screen.')
+		# 
+		self.append_action_list(type = 'Action', name = 'Tap', argument = {'x': 'int', 'y': 'int'}, 
+			description= 'Tap on a point with the input coordinates.')
+
+		self.append_action_list(type = 'Action', name = 'Tap_Template', argument = {'image_path': 'current_area', 'total_attemp': 'int', 'match_rate': 'float'}, 
+			description= 'Tap on a center of an image select from the screen.')
+
+		self.append_action_list(type = 'Action', name = 'Relative_Tap', argument = {'string_id': 'string_id', 'delta_X': 'int', 'delta_Y': 'int','match_rate': 'float'}, 
+			description= 'Tap on an image the has been registered in the DB, but moving away from the center delta value.')
+
+		self.append_action_list(type = 'Action', name = 'Send_Tab_Key', argument = None, 
+			description= 'Press TAB key on the phone, which will move the focus to the next widget.')
+
+		self.append_action_list(type = 'Action', name = 'Send_Enter_Key', argument = None, 
+			description= 'Press ENTER key on the phone, which will move the focus to the next widget.')
+
+		self.append_action_list(type = 'Action', name = 'Input_Text', argument = {'input_text':'string'}, 
+			description= 'Send a text to the input box.')
+
+		#self.append_action_list(type = 'Get_Result', name = 'Count_Object', argument = {'string_id':'string_id'}, 
+		#	description= 'Count the number of image in the current screen.')
 		#self.append_action_list(type = 'Update_Variable', name = 'Update_Gacha_Pool', argument = {'db_path':'string', 'db_sheet_name': 'string', 'db_sheet_list':'string'}, description= '')
 		#self.append_action_list(type = 'Update_Variable', name = 'Update_Execution_List', argument = {'execute_list':'string'}, description= '')
 		#self.append_action_list(type = 'Update_Variable', name = 'Update_Execution_Value', argument = {'execute_value':'string'}, description= '')
 		#self.append_action_list(type = 'Get_Result', name = 'Analyse_Gacha_Acquired', argument = {'total_item_in_gacha': 'int'}, description= '')
 		#self.append_action_list(type = 'Update_Variable', name = 'Analyse_Gacha_Result', argument = {'total_item_in_gacha': 'int'}, description= '')
-		self.append_action_list(type = 'Action', name = 'wait_for_item', argument = {'string_id':'string_id', 'match_rate': 'float', 'timeout': 'int'}, description= '')
-		self.append_action_list(type = 'Action', name = 'wait_for_template', argument = {'template_path':'current_area', 'match_rate': 'float', 'timeout': 'int'}, description= '')
+		self.append_action_list(type = 'Action', name = 'wait_for_item', argument = {'string_id':'string_id', 'match_rate': 'float', 'timeout': 'int'}, 
+			description= 'Wait until an image appears on the screen.')
 
-		self.append_action_list(type = 'Action', name = 'wait_and_tap_item', argument = {'string_id':'string_id', 'match_rate': 'float', 'timeout': 'int'}, description= '')
-		self.append_action_list(type = 'Action', name = 'wait_and_tap_template', argument = {'template_path':'current_area', 'match_rate': 'float', 'timeout': 'int'}, description= '')
+		self.append_action_list(type = 'Action', name = 'wait_for_template', argument = {'template_path':'current_area', 'match_rate': 'float', 'timeout': 'int'}, 
+			description= 'Wait until an image (select from the screen) appears on the screen.')
 
-		self.append_action_list(type = 'Action', name = 'Swipe', argument = {'point_A': 'point', 'point_B':'point'}	, description= '')
-		self.append_action_list(type = 'Action', name = 'Swipe_by_StringID', argument = {'string_id_A': 'string_id', 'string_id_B':'string_id'}	, description= '')
-		self.append_action_list(type = 'Action', name = 'Send_Enter_Key', argument = None, description= '')
-		self.append_action_list(type = 'Action', name = 'Input_Text', argument = {'input_text':'string'}, description= '')
+		self.append_action_list(type = 'Action', name = 'wait_and_tap_item', argument = {'string_id':'string_id', 'match_rate': 'float', 'timeout': 'int'}, 
+			description= 'Wait until an image appears on the screen and tap it.')
 		
-		self.append_action_list(type = 'Action', name = 'Get_Screenshot', argument = {'name': 'string'}, description= '')
+		self.append_action_list(type = 'Action', name = 'wait_and_tap_template', argument = {'template_path':'current_area', 'match_rate': 'float', 'timeout': 'int'}, 
+			description= 'Wait until an image (select from the screen) appears on the screen and tap it.')
+
+		self.append_action_list(type = 'Action', name = 'Swipe', argument = {'point_A': 'point', 'point_B':'point'}	, 
+			description= 'Swipe from a point to another, input with json format.')
+
+		self.append_action_list(type = 'Action', name = 'Swipe_by_StringID', argument = {'string_id_A': 'string_id', 'string_id_B':'string_id'}	, 
+			description= 'Swipe from a center of an image to another, select with registerd image in the DB.')
+
+		
+		
+		
+		self.append_action_list(type = 'Action', name = 'Get_Screenshot', argument = {'name': 'string'}, 
+			description= 'Save the screenshot of the screen to the result folder of the testcase.')
+
+		self.append_action_list(type = 'Action', name = 'Crop_Image', argument = {'scan_area': 'area', 'name': 'string'}, 
+			description= 'Save a selected area of the screen to the result folder of the testcase.')
+
 		#self.append_action_list(type = 'Loop', name = 'List_Loop', argument = {'list_name': 'string'}, description= '')
-		self.append_action_list(type = 'Loop', name = 'Loop', argument = {'amount': 'int'}, description= '')
-		
-		self.append_action_list(type = 'Condition', name = 'If', argument = {'condition': 'string'}, description= '')
-		
-		self.append_action_list(type = 'Action', name = 'Crop_Image', argument = {'scan_area': 'area', 'name': 'string'}, description= '')
 
-		self.append_action_list(type = 'Action', name = 'Sleep', argument = {'time': 'int'}, description= '')
+		self.append_action_list(type = 'Loop', name = 'Loop', argument = {'amount': 'int'}, 
+			description= 'Repeat the action between the start and end of the loop.')
+		
+		self.append_action_list(type = 'Condition', name = 'If', argument = {'condition': 'string'}, 
+			description= 'Perform the action if the condition is reached.')
+		
+		
+
+		self.append_action_list(type = 'Action', name = 'Sleep', argument = {'time': 'int'}, 
+			description= 'Idle for an amount of time.')
 
 		if self.OCR == True:
-			self.append_action_list(type = 'Action', name = 'Scan_Text', argument = {'scan_area': 'area'}, description= '')
+			self.append_action_list(type = 'Action', name = 'Scan_Text', argument = {'scan_area': 'area'}, 
+				description= 'Scan the text in the selected area.')
 			#self.append_action_list(type = 'Action', name = 'Test_Scan_Text', argument = {'scan_area': 'area', '2nd_scan_area': 'area'}, description= '')
 		
 		
 		if self.LoopList == True:
-			self.append_action_list(type = 'Loop', name = 'Loop List', argument = {'start_index': 'int','end_index': 'int'}, description= '')
-			self.append_action_list(type = 'Action', name = 'Input_Current_Value', argument = {'indexer': 'user_list'}, description= '')
-			self.append_action_list(type = 'Action', name = 'Tap_Current_Item', argument = {'indexer': 'user_list'}, description= '')
-			self.append_action_list(type = 'Action', name = 'Wait_For_Current_Item', argument = {'indexer': 'user_list'}, description= '')
+			self.append_action_list(type = 'Loop', name = 'Loop List', argument = {'start_index': 'int','end_index': 'int'}, 
+				description= 'Repeat the action between the start and end of the loop, during the loop, new value in the execute list are updated and can be used in some function.')
+			self.append_action_list(type = 'Action', name = 'Input_Current_Value', argument = {'indexer': 'user_list'}, 
+				description= 'Can be used within the Loop List. Input the current value of the execution list')
+			self.append_action_list(type = 'Action', name = 'Tap_Current_Item', argument = {'indexer': 'user_list'}, 
+				description= 'Can be used within the Loop List. Tap the current item declare in the execution list')
+			self.append_action_list(type = 'Action', name = 'Wait_For_Current_Item', argument = {'indexer': 'user_list'}, 
+				description= 'Can be used within the Loop List. Wait for an item declare in the execution list, and tap on it.')
 			
 		#self.append_action_list(type = 'Action', name = 'Test_Tap', argument = {'touch_point': 'point', '2nd_touch_point': 'point'}, description= '')
 
@@ -1042,6 +1088,7 @@ class Automation:
 			_ratio = resolution / _h
 		else:
 			_ratio = resolution / _w
+		print('Current ratio:', _ratio)
 		return _ratio
 
 
@@ -1056,9 +1103,7 @@ class Automation:
 			return True
 		except Exception as e:
 			return e	
-		
-	
-	
+
 	def _raw_swipe(self, x1, y1, x2, y2):
 		try:
 			command = "input swipe " + str(x1) + " " + str(y1) + " " + str(x2) + " " + str(y2)
