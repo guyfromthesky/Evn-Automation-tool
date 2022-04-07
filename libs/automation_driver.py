@@ -1175,15 +1175,15 @@ class Automation:
 
 
 	def _swipe(self, x1, y1, x2, y2):
-		result = self._raw_swipe(self.Ratio*x1, self.Ratio*y1, self.Ratio*x2, self.Ratio*y2)
+		result = self._raw_swipe(x1/self.Ratio, y1/self.Ratio, x2/self.Ratio, y2/self.Ratio)
 		return result
 
 	def _swipe_location(self, point1, point2):
-		result = self._raw_swipe(self.Ratio*point1['x'], self.Ratio*point1['y'], self.Ratio*point2['x'], self.Ratio*point2['y'])
+		result = self._raw_swipe(point1['x']/self.Ratio, point1['y']/self.Ratio, point2['x']/self.Ratio, point2['y']/self.Ratio)
 		return	result
 
 	def _tap(self, x, y):
-		result = self._raw_tap(self.Ratio*x, self.Ratio*y)
+		result = self._raw_tap(x/self.Ratio, y/self.Ratio)
 		return result
 
 	def _tap_location(self, location):
@@ -1224,13 +1224,21 @@ class Automation:
 			return False	
 
 
-	def Get_Screenshot_In_Working_Resolution(self):
+	def Get_Screenshot_In_Working_Resolution(self, resolution=None):
 		
 		Img_Screenshot = self.Device.screencap()
 		Img_Screenshot = np.asarray(Img_Screenshot)
 		Img_Screenshot = cv2.imdecode(Img_Screenshot, cv2.IMREAD_COLOR)
 		#Img_Screenshot = cv2.cvtColor(Img_Screenshot , cv2.COLOR_BGR2RGB)
-		_ratio = self.Ratio
+		if resolution != None:
+			(_h, _w) = Img_Screenshot.shape[:2]
+			if _w > _h:
+				_ratio = resolution / _h
+			else:
+				_ratio = resolution / _w
+		else:
+			_ratio = self.Ratio
+
 		if _ratio != 1:
 			width = int(Img_Screenshot.shape[1] * _ratio)
 			height = int(Img_Screenshot.shape[0] * _ratio)

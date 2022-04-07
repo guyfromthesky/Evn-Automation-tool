@@ -1167,7 +1167,7 @@ class Automation_Execuser(Frame):
 		Button(child_windows, text = 'Set value', command = lambda c=child_windows,x= this_type, y= this_action,i=treeview_node, a=arg_data_list: self.Modify_Input_Value_On_Closing(c,a,x, y, i)).grid(row=row,column=2, padx=10, pady=10, sticky=E)
 
 	def Btn_Select_Area(self, text_widget):
-		im = self.AutoTester.Get_Screenshot_In_Working_Resolution()
+		im = self.AutoTester.Get_Screenshot_In_Working_Resolution(self.WorkingResolution)
 		show_im, ratio = self.Resize_Image_by_ratio(im)
 		#image = cv2.imdecode(np.frombuffer(im, np.uint8), cv2.IMREAD_COLOR)
 		location = cv2.selectROI("Sekect scan area", show_im, showCrosshair=False,fromCenter=False)
@@ -1181,7 +1181,7 @@ class Automation_Execuser(Frame):
 		text_widget.insert("end", json.dumps(area))
 
 	def Btn_Crop_Area(self, text_widget):
-		im = self.AutoTester.Get_Screenshot_In_Working_Resolution()
+		im = self.AutoTester.Get_Screenshot_In_Working_Resolution(self.WorkingResolution)
 		show_im, ratio = self.Resize_Image_by_ratio(im)
 		#im = cv2.cvtColor(im , cv2.COLOR_BGR2RGB)
 		#im = cv2.imdecode(np.frombuffer(im, np.uint8), cv2.IMREAD_COLOR)
@@ -1200,7 +1200,7 @@ class Automation_Execuser(Frame):
 
 	def Btn_Select_Point(self, text_widget):
 		self.temp_widget = text_widget
-		im = self.AutoTester.Get_Screenshot_In_Working_Resolution()
+		im = self.AutoTester.Get_Screenshot_In_Working_Resolution(self.WorkingResolution)
 		show_im, ratio = self.Resize_Image_by_ratio(im)
 		#image = cv2.imdecode(np.frombuffer(im, np.uint8), cv2.IMREAD_COLOR)
 		cv2.imshow('Screen', show_im)
@@ -1248,15 +1248,24 @@ class Automation_Execuser(Frame):
 			dim = (width, height)
 			img = cv2.resize(img, dim, interpolation = cv2.INTER_AREA)
 			#(_h, _w) = img.shape[:2]
-
-		resolution= self.WorkingResolution.get()
-		print(_h, _w, resolution)
-		if _w > _h:
-			actual_ratio = resolution / _h
+		'''
+		_resolution_index = self.Resolution.get()
+		if _resolution_index == 1:
+			_WorkingResolution = 720
 		else:
-			actual_ratio = resolution / _w
+			_WorkingResolution = 1080
+		
+		print(_h, _w, _WorkingResolution)
+
+		if _w > _h:
+			actual_ratio = _WorkingResolution / _h
+		else:
+			actual_ratio = _WorkingResolution / _w
 		print(actual_ratio)	
 		actual_ratio = actual_ratio * _ratio
+		'''
+		
+		actual_ratio = _ratio
 		print(actual_ratio)
 		return img, actual_ratio
 
@@ -1651,10 +1660,10 @@ class Automation_Execuser(Frame):
 		_resolution = self.Configuration['AUTO_TOOL']['resolution']
 		self.Resolution.set(_resolution)
 		if _resolution == 1:
-			resolution = 720
+			self.WorkingResolution = 720
 		else:
-			resolution = 1080 
-		self.AutoTester.Update_Resolution(resolution)
+			self.WorkingResolution = 1080 
+		self.AutoTester.Update_Resolution(self.WorkingResolution)
 
 		self.Update_Action_List()
 		self.Get_Serial()
