@@ -154,6 +154,7 @@ class Automation:
 				function_object = getattr(self, _test_name)
 				if len(_arg_list) > 0:	
 					for _temp_arg in _arg_list:
+						#print('_temp_arg', _temp_arg)
 						_value_type = _temp_arg['type']
 						_raw_value = _temp_arg['value']
 						if _raw_value != '':
@@ -184,7 +185,7 @@ class Automation:
 		# TestCase_Object = List object
 		_index = -1
 		for index in range(0, len(TestCase_Object)):
-			print('index', index, '_index', index, 'start_index', start_index)
+			#print('index', index, '_index', index, 'start_index', start_index)
 			if index < _index:
 				continue
 			else:
@@ -200,13 +201,12 @@ class Automation:
 				return test_case_list,index
 			else:
 				pass
-			print('Checking row:', index)	
 			test_object = TestCase_Object[index]
 
 			_test_type = test_object['type']
 			_test_name = test_object['name']
 			_arg_list = test_object['arg']
-			print('_test_type', _test_type)
+			print('Action:', _test_name)
 			if _test_type == "Loop":
 				# Loop number/list
 				_test_name = test_object['name']
@@ -782,6 +782,7 @@ class Automation:
 		for i in range(total_attemp):
 			try:
 				result = self._get_item_location(image_path, match_rate)
+				print('Tap_Template', result)
 			except Exception as e:
 				result = False
 				print('Error from Tap_Item:', e)
@@ -948,8 +949,8 @@ class Automation:
 		while (Now - Start) < Wait_Time:
 			print('Waiting time:', str(Now- Start))
 			Now = time.time()
-			result = self._count_object(template_path, match_rate)
-			print('Count issue:', result)
+			result = self._get_item_location(template_path, match_rate)
+			print('Item location:', result)
 			if result != False:
 				ResultStatus = True
 				break
@@ -982,7 +983,7 @@ class Automation:
 		while (Now - Start) < Wait_Time:
 			print('Waiting time:', str(Now- Start))
 			Now = time.time()
-			result = self._count_object(template_path, match_rate)
+			result = self._get_item_location(template_path, match_rate)
 			#print('Count issue:', result)
 			if result != False:
 				print('wait result:', result)
@@ -1206,11 +1207,12 @@ class Automation:
 		Loc = None
 		result = cv2.matchTemplate(_img_screenshot, template, cv2.TM_CCOEFF_NORMED)
 		(_, maxVal, _, maxLoc) = cv2.minMaxLoc(result)
-		match_rate *=0.5
+		#match_rate *=0.9
 		if Found is None or maxVal > Found[0]:
 			
 			Found = (maxVal, maxLoc)
 			if maxVal >= match_rate:
+				print('maxVal', maxVal, 'match_rate', match_rate)
 				(startX, startY) = (int(maxLoc[0]), int(maxLoc[1]))
 				(endX, endY) = (int((maxLoc[0] + tW)), int((maxLoc[1] + tH)))
 				Loc = {"x": int((maxLoc[0] + 0.5 * tW)), "y": int((maxLoc[1] + 0.5 * tH)), "w": int(abs(startX-endX)), "h": int(abs(startY-endY))}
@@ -1218,7 +1220,7 @@ class Automation:
 		if Loc != None:
 			# Return the real location on the screen:
 			for key in Loc:
-				Loc[key] /= self.Ratio
+				Loc[key]
 			return Loc
 		else:
 			return False	
@@ -1238,7 +1240,7 @@ class Automation:
 				_ratio = resolution / _w
 		else:
 			_ratio = self.Ratio
-
+		print('Rescale ratio:', _ratio)
 		if _ratio != 1:
 			width = int(Img_Screenshot.shape[1] * _ratio)
 			height = int(Img_Screenshot.shape[0] * _ratio)

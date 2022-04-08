@@ -175,7 +175,12 @@ class Automation_Execuser(Frame):
 		#print('Get device serial')
 		#self.Get_Serial()
 		self.parent.bind('<Control-l>', self.Btn_Browse_Test_Case_File)
-		self.parent.bind('<Control-s>', self.Btn_Save_Test_Case_File)  
+		self.parent.bind('<Control-s>', self.Btn_Save_Test_Case_File) 
+
+	
+		self.parent.bind('<Control-x>', self.cut_treeview) 
+		self.parent.bind('<Control-c>', self.copy_treeview)
+		self.parent.bind('<Control-v>', self.paste_treeview) 
 		self.after(DELAY2, self.status_listening)
 
 	# UI init
@@ -817,7 +822,9 @@ class Automation_Execuser(Frame):
 		else:
 			start = index_list[0]+1
 			end = index_list[-1]+1
+
 		self.Treeview.insert('', start, text= '', values = self.Current_Arg_Value)
+
 		if self.Current_Arg_Type == 'Loop':
 			self.Treeview.insert('', end, text= '', values=['Loop','End Loop'])
 		elif self.Current_Arg_Type == 'Condition':
@@ -841,8 +848,64 @@ class Automation_Execuser(Frame):
 			self.Treeview.move(i, self.Treeview.parent(i), self.Treeview.index(i)+1)
 
 	def remove_treeview(self):
+
 		for i in self.Treeview.get_children():
 			self.Treeview.delete(i)
+
+	def copy_treeview(self, event = None):
+		self.Write_Debug('Update copy list')
+		selected = self.Treeview.selection()
+		
+		self.coppied_list = selected
+		self.is_cut = False
+
+	def cut_treeview(self, event = None):
+		self.Write_Debug('Update cut list')
+		selected = self.Treeview.selection()
+		self.coppied_list = selected
+		self.is_cut = True
+
+
+	def paste_treeview(self, event = None):
+		if self.coppied_list == None:
+			messagebox.showwarning('None row is selected.')
+			return
+		selected = self.Treeview.selection()
+		index_list = []
+		for child_obj in selected:
+			index = self.Treeview.index(child_obj)
+			index_list.append(index)
+		index_list.sort()	
+
+		if len(selected) == 0:
+			_end_index = 'end'
+		else:
+			_end_index = index_list[-1]+1
+		self.Write_Debug('Add item to row ' + str(_end_index))
+		for i in reversed(self.coppied_list):
+			child = self.Treeview.item(i)
+			values = child['values']
+			self.Treeview.insert('', _end_index, text= '', values=values)
+
+			if self.is_cut == True:
+				self.Treeview.delete(i)
+		self.coppied_list = None
+		self.is_cut = False		
+		'''
+		if len() == 1:
+			start = self.coppied_list[0]
+			end = self.coppied_list[0]+1
+		else:
+			start = self.coppied_list[0]+1
+			end = self.coppied_list[-1]+1
+
+		for i in reversed(leaves):
+			self.Treeview.insert('', start, text= '', values = self.Current_Arg_Value)
+		
+		for i in self.Treeview.get_children():
+			self.Treeview.delete(i)	
+		'''
+		
 
 	def Treeview_Deselect_Row(self, event):
 		'''
@@ -877,7 +940,10 @@ class Automation_Execuser(Frame):
 		self.popup = Menu(self.parent, tearoff=0)
 		self.popup.add_command(label="Move Up", command = self.move_treeview_up) # , command=next) etc...
 		self.popup.add_command(label="Move Down", command = self.move_treeview_down)
-		#self.popup.add_separator()
+		self.popup.add_separator()
+		self.popup.add_command(label="Cut", command = self.cut_treeview)
+		self.popup.add_command(label="Copy", command = self.copy_treeview)
+		self.popup.add_command(label="Paste", command = self.paste_treeview)
 		#self.popup.add_command(label="Exit", command=lambda: self.closeWindow())
 
 	
