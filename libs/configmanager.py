@@ -69,6 +69,8 @@ class ConfigLoader:
 		
 		self.Init_Config_Option(config, self.section_name, 'tess_path', '', True)
 		self.Init_Config_Option(config, self.section_name, 'tess_data', '', True)
+		self.Init_Config_Option(config, self.section_name, 'custom_action', '', True)
+		
 		self.Init_Config_Option(config, self.section_name, 'db_path', self.CWD + '\\DB\\db.csv', True)
 		self.Init_Config_Option(config, self.section_name, 'scan_lang', 'eng')
 		self.Init_Config_Option(config, self.section_name, 'app_lang', 'en')

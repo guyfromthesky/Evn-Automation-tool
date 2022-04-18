@@ -56,7 +56,7 @@ CWD = os.path.abspath(os.path.dirname(sys.argv[0]))
 ADBPATH = '\"' + CWD + '\\adb\\adb.exe' + '\"'
 #MyTranslatorAgent = 'google'
 Tool = "Auto Tester"
-VerNum = ' 1.0.1c '
+VerNum = ' 1.0.1d '
 version = Tool  + " " +  VerNum
 DELAY1 = 20
 DELAY2 = 100
@@ -459,6 +459,12 @@ class Automation_Execuser(Frame):
 		Label(Tab, text= self.LanguagePack.Label['DBPath']).grid(row=Row, column=1, padx=5, pady=5, sticky=W)
 		self.Entry_DB_Path = Entry(Tab,width = 100, state="readonly", textvariable=self.Text_DB_Path)
 		self.Entry_DB_Path.grid(row=Row, column=3, columnspan=5, padx=5, pady=5, sticky=E+W)
+		Button(Tab, width = self.Button_Width_Full, text=  self.LanguagePack.Button['Browse'], command= self.Btn_Browse_DB_File).grid(row=Row, column=9, columnspan=2, padx=5, pady=5, sticky=E)
+		
+		Row += 1
+		Label(Tab, text= 'Custom Action').grid(row=Row, column=1, padx=5, pady=5, sticky=W)
+		self.Entry_CustomAction_Path = Entry(Tab,width = 100, state="readonly", textvariable=self.Text_CustomAction_Path)
+		self.Entry_CustomAction_Path.grid(row=Row, column=3, columnspan=5, padx=5, pady=5, sticky=E+W)
 		Button(Tab, width = self.Button_Width_Full, text=  self.LanguagePack.Button['Browse'], command= self.Btn_Browse_DB_File).grid(row=Row, column=9, columnspan=2, padx=5, pady=5, sticky=E)
 		
 	def Generate_Debugger_UI(self,Tab):
@@ -1663,6 +1669,8 @@ class Automation_Execuser(Frame):
 		self.TesseractPath = StringVar()
 		self.TesseractDataPath = StringVar()
 		self.WorkingLanguage = StringVar()
+		self.Text_CustomAction_Path = StringVar()
+
 		self.language_list = ['']
 		self.Current_Arg_Type = []
 		self.Current_Arg_Type = None
@@ -1694,6 +1702,9 @@ class Automation_Execuser(Frame):
 
 		_db_path = self.Configuration['AUTO_TOOL']['db_path']
 		
+		_custom_action_path = self.Configuration['AUTO_TOOL']['custom_action']
+		self.Text_CustomAction_Path.set(_custom_action_path)
+
 		self.DB_Folder = os.path.dirname(_db_path)
 		print('DB folder:', self.DB_Folder)
 		Init_Folder(self.DB_Folder)
