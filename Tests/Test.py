@@ -1,6 +1,10 @@
-from appium import webdriver
-from appium.webdriver.common.touch_action import TouchAction
-from appium.webdriver.common.multi_action import MultiAction
+from selenium import webdriver
+from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.common.actions import interaction
+
+from selenium.webdriver.common.actions.action_builder import ActionBuilder
+
+from selenium.webdriver.common.actions.action_builder import PointerInput
 # ...
 
 desired_caps = dict(
@@ -8,27 +12,27 @@ desired_caps = dict(
     platformVersion='11',
     automationName='uiautomator2',
     deviceName='R58M33SC4XJ',
-    app=r'C:\Users\evan\OneDrive - NEXON COMPANY\[Demostration] V4 Gacha test\selendroid-test-app-0.17.0.apk'
 )
 
-driver = webdriver.Remote('http://localhost:4723/wd/hub', desired_caps)
-'''
-a1 = TouchAction()
-a1.press(10, 20)
-a1.move_to(10, 200)
-a1.release()
+driver = webdriver.Remote('http://localhost:4723/wd/hub', desired_capabilities = desired_caps)
 
-a2 = TouchAction()
-a2.press(10, 10)
-a2.move_to(10, 100)
-a2.release()
+actions = ActionChains(driver)
 
-ma = MultiAction(driver)
-ma.add(a1, a2)
-ma.perform()
+actions.w3c_actions = ActionBuilder(driver, mouse=PointerInput(interaction.POINTER_TOUCH, 'touch'))
+#actions.w3c_actions.pointer_action.move_to_location(x=540, y=940)
 
-'''
-
-ma = MultiAction(driver)
-ma.add(a1, a2)
-ma.perform()
+actions.w3c_actions.pointer_action.move_to_location(x=340, y=940)
+actions.w3c_actions.pointer_action.click_and_hold()
+actions.w3c_actions.pointer_action.pause(750)
+actions.w3c_actions.pointer_action.move_to_location(x=740, y=940)
+actions.w3c_actions.pointer_action.click_and_hold()
+actions.w3c_actions.pointer_action.pause(750)
+actions.w3c_actions.pointer_action.move_to_location(x=940, y=940)
+actions.w3c_actions.pointer_action.click_and_hold()
+actions.w3c_actions.pointer_action.pause(750)
+actions.w3c_actions.pointer_action.move_to_location(x=940, y=740)
+actions.w3c_actions.pointer_action.click_and_hold()
+actions.w3c_actions.pointer_action.pause(750)
+# actions.w3c_actions.pointer_action.click()
+actions.w3c_actions.pointer_action.pointer_up()
+actions.w3c_actions.perform()
