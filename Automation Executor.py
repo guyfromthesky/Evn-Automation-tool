@@ -755,9 +755,11 @@ class Automation_Execuser(Frame):
 			end = index_list[-1]+2
 
 		this_type = self.current_action_type.get()
+		#print('this_type', this_type)
 		this_action = self.current_action_name.get()
+		#print('this_action', this_action)
 		if self.Current_Arg_Type == None:
-			this_tag = None
+			this_tag = ''
 		else:	
 			this_tag = self.Current_Arg_Type.lower()
 
@@ -769,8 +771,8 @@ class Automation_Execuser(Frame):
 				messagebox.showwarning('Warning', 'Please input the value before adding an action.')
 				return
 
-		self.Treeview.insert('', start, text= '', values = [this_type, this_action], tags= this_tag)
-		
+		#self.Treeview.insert('', start, text= '', values = [this_type, this_action], tags= this_tag)
+		self.Treeview.insert('', start, text= '', values = [*self.Current_Arg_Value], tags= this_tag)
 		if self.Current_Arg_Type == 'Loop':
 			self.Treeview.insert('', end, text= '', values=['Loop','End Loop'], tags= this_tag)
 		elif self.Current_Arg_Type == 'Condition':
@@ -1828,8 +1830,12 @@ class Automation_Execuser(Frame):
 							value = str(location[col])
 						else:
 							value = ""
-						values.append(value)	
-					self.Treeview.insert('', 'end', text= '', values=values)
+						values.append(value)
+
+					if len(values) > 0:
+						this_tag = values[0].lower()
+						self.Treeview.insert('', 'end', text= '', values=values, tags= this_tag)
+					
 		else:
 			self.Write_Debug(self.LanguagePack.ToolTips['SourceDocumentEmpty'])
 
