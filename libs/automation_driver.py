@@ -1,5 +1,3 @@
-
-
 from ppadb.client import Client as AdbClient
 import os, sys
 import cv2
@@ -21,6 +19,10 @@ CWD = os.path.abspath(os.path.dirname(sys.argv[0]))
 import csv
 from openpyxl import load_workbook
 
+import importlib.machinery
+import importlib.util
+
+
 # Return result format:
 # {
 # 	"Type": Execute/Result/..,
@@ -32,7 +34,7 @@ from openpyxl import load_workbook
 class Automation:
 	# Serial: Device's serial
 	# DB: Database's Path.
-	def __init__(self, Status_Queue, Resolution = '1080', Language = 'en', Tess_Path = None, Tess_Data = None, Serial = None, DB_Path = None, Result_Folder_Path = None):
+	def __init__(self, Status_Queue, Resolution = '1080', Language = 'en', Tess_Path = None, Tess_Data = None, Serial = None, DB_Path = None, Result_Folder_Path = None, Module_Path = None):
 		self.Debugger = Status_Queue
 		
 		self.Client = AdbClient(host="127.0.0.1", port=5037)
@@ -66,8 +68,8 @@ class Automation:
 			self.Serial = Serial
 			if self.Client != None:	
 				self.Device = self.Client.device(Serial)
-				self.Ratio = self.Get_Ratio()
-			
+				if self.Device != None:
+					self.Ratio = self.Get_Ratio()
 			else:
 				self.Device = None
 		else:
@@ -77,6 +79,9 @@ class Automation:
 			self.Function_Import_DB(DB_Path)
 
 		self.Update_Action_List()
+
+		if Module_Path != None:
+			self.Function_Load_Module(Module_Path)
 
 	def append_action_list(self, type = None, name = None, argument = [], description = ''):
 	
@@ -173,16 +178,38 @@ class Automation:
 					_check_condition = False
 				if _check_condition == True:
 					self.Function_Execute_Block(Status_Queue, Progress_Queue, Pause_Status, Code_Block)
-		
+			elif _block_type == "Comment":
+				#Status_Queue.put('Execute result: '+ _test_name + '->' + str(result))
+				continue
+
+	def Function_Load_Module(self, Module_Path):
+		# Need to run again in main Automation lib
+		for file_path in Module_Path:
+			loader = importlib.machinery.SourceFileLoader( 'mymodule', file_path)
+			spec = importlib.util.spec_from_loader( 'mymodule', loader )
+			mymodule = importlib.util.module_from_spec( spec )
+			
+			loader.exec_module( mymodule)
+			all_functions = dir(mymodule)
+			new_functions = []
+			for mymodule_name in all_functions:
+				if not mymodule_name.startswith('__'):
+					new_functions.append(mymodule_name)
+			for function in new_functions:
+				real_f = getattr(mymodule, function)
+				a = real_f()
+				setattr(self, real_f.__name__, getattr(a, 'func'))
+				self.append_action_list(type = 'Action', name = real_f.__name__ , argument = a.kwarg, description= '')
+			
+			self.append_action_list(type = 'Action', name = 'Send_Enter_Key', argument = None, 
+				description= 'Press ENTER key on the phone, which will move the focus to the next widget.')
 
 
 
 	def Function_Generate_TestCase(self, TestCase_Object, Execution_List, _current_execution_value = None, recursion_type = None, start_index = None):
-		
 
 		test_case_list = []
 	
-		# TestCase_Object = List object
 		_index = -1
 		for index in range(0, len(TestCase_Object)):
 			#print('index', index, '_index', index, 'start_index', start_index)
@@ -404,6 +431,8 @@ class Automation:
 				_index = _current_condition_index+1
 				if recursion_type == 'condition':
 					return test_case_list,_index
+			elif _test_type == "Comment":
+				continue
 			else:
 				# Action type
 				_chain = self.chain_warpped('action', test_object)
@@ -624,7 +653,7 @@ class Automation:
 		self.append_action_list(type = 'Action', name = 'wait_and_tap_template', argument = {'template_path':'current_area', 'match_rate': 'float', 'timeout': 'int'}, 
 			description= 'Wait until an image (select from the screen) appears on the screen and tap it.')
 
-		self.append_action_list(type = 'Action', name = 'Swipe', argument = {'point_A': 'point', 'point_B':'point'}	, 
+		self.append_action_list(type = 'Action', name = 'Swipe_by_Location', argument = {'point_A': 'point', 'point_B':'point'}	, 
 			description= 'Swipe from a point to another, input with json format.')
 
 		self.append_action_list(type = 'Action', name = 'Swipe_by_StringID', argument = {'string_id_A': 'string_id', 'string_id_B':'string_id'}	, 
@@ -651,6 +680,9 @@ class Automation:
 
 		self.append_action_list(type = 'Action', name = 'Sleep', argument = {'time': 'int'}, 
 			description= 'Idle for an amount of time.')
+
+		self.append_action_list(type = 'Comment', name = 'Comment', argument = {'comment': 'string'}, 
+			description= 'Comment for the test step.')
 
 		if self.OCR == True:
 			self.append_action_list(type = 'Action', name = 'Scan_Text', argument = {'scan_area': 'area'}, 
@@ -994,9 +1026,9 @@ class Automation:
 
 		return self.Generate_Result(Status = ResultStatus)	
 
-	def Swipe(self, point_A, point_B):
+	def Swipe_by_Location(self, point_A, point_B):
 		
-		result = self._raw_swipe(point_A, point_B)
+		result = self._swipe_location(point_A, point_B)
 
 		return self.Generate_Result(Status = result)
 
@@ -1008,7 +1040,7 @@ class Automation:
 		Template_B_Path = self.UI[StringID_B]['Path']
 		Loc_B= self._get_item_location(Template_B_Path)
 
-		result = self._raw_swipe(Loc_A, Loc_B)
+		result = self._swipe_location(Loc_A, Loc_B)
 
 		return self.Generate_Result(Status = result)
 
@@ -1069,14 +1101,10 @@ class Automation:
 		print('Save image to: ', Img_Name)
 		ResultStatus = True
 		try:
-			with open(Img_Name, "wb") as fp:
-				fp.write(Image)
+			cv2.imwrite(Img_Name, Img_Name)
 		except:
 			ResultStatus = False
-		
 		return self.Generate_Result(Status = ResultStatus)
-
-	
 
 	def Get_Ratio(self):
 		Img_Screenshot = self.Device.screencap()

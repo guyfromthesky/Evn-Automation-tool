@@ -55,9 +55,9 @@ import pytesseract
 CWD = os.path.abspath(os.path.dirname(sys.argv[0]))
 ADBPATH = '\"' + CWD + '\\adb\\adb.exe' + '\"'
 #MyTranslatorAgent = 'google'
-Tool = "Auto Tester"
-VerNum = ' 1.0.1d '
-version = Tool  + " " +  VerNum
+TOOL = "Auto Tester"
+VERNUM = ' 1.0.1h'
+VERSION = TOOL  + " " +  VERNUM
 DELAY1 = 20
 DELAY2 = 100
 DELAY3 = 200
@@ -187,7 +187,7 @@ class Automation_Execuser(Frame):
 	def init_UI(self):
 
 		self.parent.resizable(False, False)
-		self.parent.title(version)
+		self.parent.title(VERSION)
 
 		self.Generate_Menu_UI()
 		self.Generate_Tab_UI()
@@ -337,7 +337,7 @@ class Automation_Execuser(Frame):
 	
 		Row+=1
 		Label(Tab, text= self.LanguagePack.Label['ActionType'], width= 20).grid(row=Row, column=1, columnspan=2, padx=5, pady=5, sticky=W)
-		action_type_list = ['', 'Loop', 'Condition', 'Get_Result', 'Action', 'Update_Variable']
+		action_type_list = ['', 'Loop', 'Condition', 'Get_Result', 'Action', 'Update_Variable', 'Comment']
 		action_type_list.sort()
 		self.current_action_type.set(action_type_list[0])
 		# creating widget
@@ -358,17 +358,20 @@ class Automation_Execuser(Frame):
 		#self.action_type.set_completion_list(['Loop', 'Condition', 'Get_Result', 'Action', 'Update_Variable',])
 		self.action_name.grid(row=Row, column=6, columnspan=2, padx=5, pady=5, sticky=W)
 	
-		Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['InputData'], command= self.Generate_Input_Window).grid(row=Row, column=10, padx=5, pady=0, sticky=W+E)
+		self.btn_input_data = Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['InputData'], command= self.Generate_Input_Window)
+		self.btn_input_data.grid(row=Row, column=10, padx=5, pady=0, sticky=W+E)
 
 		Row+=1
 		Treeview_Row = 20
 		self.Generate_Treeview_Advanced_UI(Tab, Row, Treeview_Row)
 
-		Row+=1
-		Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['AddOnTop'], command= self.insert_treeview_above).grid(row=Row, column=10,padx=5, pady=0, sticky=W)
+		#Row+=1
+		#self.btn_add_step_above = Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['AddOnTop'], command= self.insert_treeview_above)
+		#self.btn_add_step_above.grid(row=Row, column=10,padx=5, pady=0, sticky=W)
 
 		Row+=1
-		Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['AddStep'], command= self.add_treeview_row).grid(row=Row, column=10,padx=5, pady=0, sticky=W)
+		self.btn_add_step = Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['AddStep'], command= self.add_treeview_row)
+		self.btn_add_step.grid(row=Row, column=10,padx=5, pady=0, sticky=W)
 		#Row+=1
 		#Button(Tab, width = self.Button_Width_Half, text=  'Browse Module', command= self.Browse_Module).grid(row=Row, column=10,padx=5, pady=0, sticky=W)
 
@@ -438,6 +441,11 @@ class Automation_Execuser(Frame):
 		self.Treeview.bind("<Double-1>", self.Treeview_Edit_Row)
 		self.Treeview.bind("<Button-3>", self.Treeview_Show_Right_Menu)
 		self.createWindow()
+
+		self.Treeview.tag_configure('comment', foreground="#006C78")
+		self.Treeview.tag_configure('loop', foreground="#B8516A")
+		self.Treeview.tag_configure('condition', foreground="#FF7722")
+		self.Treeview.tag_configure('action', foreground="#3B4248")
 
 	def Generate_OCR_Setting_UI(self, Tab):
 		''''
@@ -745,22 +753,28 @@ class Automation_Execuser(Frame):
 		else:
 			start = index_list[-1]+1
 			end = index_list[-1]+2
+
+		this_type = self.current_action_type.get()
+		this_action = self.current_action_name.get()
 		if self.Current_Arg_Type == None:
-			this_type = self.current_action_type.get()
-			this_action = self.current_action_name.get()
+			this_tag = None
+		else:	
+			this_tag = self.Current_Arg_Type.lower()
+
+		if self.Current_Arg_Type == None:	
 			if this_type != '' and this_action != '':
-				self.Treeview.insert('', start, text= '', values = [this_type, this_action])
+				self.Treeview.insert('', start, text= '', values = [this_type, this_action], tags= this_tag)
 				return
-			else:	
+			else:	 
 				messagebox.showwarning('Warning', 'Please input the value before adding an action.')
 				return
 
-		self.Treeview.insert('', start, text= '', values =  self.Current_Arg_Value)
+		self.Treeview.insert('', start, text= '', values = [this_type, this_action], tags= this_tag)
 		
 		if self.Current_Arg_Type == 'Loop':
-			self.Treeview.insert('', end, text= '', values=['Loop','End Loop'])
+			self.Treeview.insert('', end, text= '', values=['Loop','End Loop'], tags= this_tag)
 		elif self.Current_Arg_Type == 'Condition':
-			self.Treeview.insert('', end, text= '', values= ['Condition', 'End If'])
+			self.Treeview.insert('', end, text= '', values= ['Condition', 'End If'], tags= this_tag)
 		else:
 			print('Type:', self.Current_Arg_Type)	
 		
@@ -795,7 +809,10 @@ class Automation_Execuser(Frame):
 			this_type = self.current_action_type.get()
 			this_action = self.current_action_name.get()
 			if this_type != '' and this_action != '':
-				self.Treeview.insert('', start, text= '', values = [this_type, this_action])
+				if this_type == 'Comment':
+					self.Treeview.insert('', start, text= '', values = [this_type, this_action], tags=('comment',))
+				else:	
+					self.Treeview.insert('', start, text= '', values = [this_type, this_action])
 				return
 			else:	
 				messagebox.showwarning('Warning', 'Please input the value before adding an action.')
@@ -828,8 +845,11 @@ class Automation_Execuser(Frame):
 		else:
 			start = index_list[0]+1
 			end = index_list[-1]+1
-
-		self.Treeview.insert('', start, text= '', values = self.Current_Arg_Value)
+		
+		if self.Current_Arg_Type == 'Comment':
+			self.Treeview.insert('', start, text= '', values = self.Current_Arg_Value, tags=('comment',))
+		else:	
+			self.Treeview.insert('', start, text= '', values = self.Current_Arg_Value)
 
 		if self.Current_Arg_Type == 'Loop':
 			self.Treeview.insert('', end, text= '', values=['Loop','End Loop'])
@@ -972,14 +992,16 @@ class Automation_Execuser(Frame):
 				this_action = self.current_action_name.set('')
 				return
 		this_arg = self.action_dict[this_type][action_name]
+		self.btn_add_step.configure(state=DISABLED)
 		print('this_arg', action_name, this_arg)
-
+		
 	# This is temporary work, we need to add the value of the arg instead of the arg name.
 	# Will be updated later.
 	def generate_step_data(self):
 		this_type = self.current_action_type.get()
 		this_action = self.current_action_name.get()
-		values = [this_type] + [this_action] + self.input_value
+		input_value = ''
+		values = [this_type] + [this_action] + input_value
 
 		return values
 
@@ -998,6 +1020,7 @@ class Automation_Execuser(Frame):
 		self.Current_Arg_Value = []
 		self.Current_Arg_Type = None
 		if arg_dict == None:
+			self.btn_add_step.configure(state=NORMAL)
 			return
 		
 		child_windows = Toplevel(self.parent)
@@ -1040,12 +1063,15 @@ class Automation_Execuser(Frame):
 					arg_data['value_variable'] = StringVar()
 					value_list = [*self.AutoTester.UI]
 					value_list.sort()
-					arg_data['value_variable'].set(value_list[0])
-					# creating widget
-					arg_data['widget'] = AutocompleteCombobox(child_windows)
-					arg_data['widget'].set_completion_list(value_list)
-					arg_data['widget'].Set_Entry_Width(35)
-					arg_data['widget'].grid(row=row,column=2, padx=10, pady=10, sticky=W+S)
+					if len(value_list) > 0:
+						arg_data['value_variable'].set(value_list[0])
+						# creating widget
+						arg_data['widget'] = AutocompleteCombobox(child_windows)
+						arg_data['widget'].set_completion_list(value_list)
+						arg_data['widget'].Set_Entry_Width(35)
+						arg_data['widget'].grid(row=row,column=2, padx=10, pady=10, sticky=W+S)
+					else:
+						continue	
 				elif arg_data['variable_type'] == 'user_list':
 					#self.Execute_List_values
 					arg_data['value_variable'] = StringVar()
@@ -1377,8 +1403,10 @@ class Automation_Execuser(Frame):
 
 		self.Current_Arg_Value = values
 		self.Current_Arg_Type = this_type
+		self.btn_add_step.configure(state=NORMAL)
 		if child_windows != None:
-			child_windows.destroy()	
+			child_windows.destroy()
+		#self.btn_add_step.configure(state=NORMAL)
 
 	def Modify_Input_Value_On_Closing(self,child_windows, arg_data_list, this_type= None, this_action= None, treeview_node= None):
 		if this_type == None:
@@ -1438,7 +1466,7 @@ class Automation_Execuser(Frame):
 	def Update_Action_List(self):
 
 		print('Update action list to drop list')
-		action_type = ['Action', 'Loop', 'Condition', 'Get_Result', 'Update_Variable']
+		action_type = ['Action', 'Loop', 'Condition', 'Get_Result', 'Update_Variable', 'Comment']
 		action_type.sort()
 		self.action_dict = {}
 		for type in action_type:
@@ -1454,7 +1482,7 @@ class Automation_Execuser(Frame):
 
 	def Browse_Module(self):
 		#need to run again in main Automation lib
-		from inspect import getmembers, isfunction
+		#from inspect import getmembers, isfunction
 		print('Enter lib path:')
 		path = r'C:\Users\Evan\OneDrive\Documents\GitHub\Evn-Automation-tool\libs\New Python File.py'
 		
@@ -1502,7 +1530,8 @@ class Automation_Execuser(Frame):
 			self.current_action_name.set(action_list[0])
 		else:	
 			self.current_action_name.set("")	
-
+		self.btn_add_step.configure(state=DISABLED)
+		
 	def ImportTestCase(self, Test_Case_File_Path):
 		print('Loading My Dictionary')
 		if Test_Case_File_Path != None:
@@ -1758,7 +1787,17 @@ class Automation_Execuser(Frame):
 		#print(self.BackgroundColor)
 		return
 
-	
+	def Btn_Browse_Module_File(self):
+			
+		filename = filedialog.askopenfilename(title =  self.LanguagePack.ToolTips['SelectSource'],filetypes = (("Template files", "*.jpg *.png"), ), multiple = False)	
+		if filename != "":
+			self.Template_Path = self.CorrectPath(filename)
+			self.Str_Template_Path.set(filename)
+			self.Notice.set(self.LanguagePack.ToolTips['SourceSelected'])
+		else:
+			self.Notice.set(self.LanguagePack.ToolTips['SourceDocumentEmpty'])
+		return
+
 	def Btn_Browse_Template_File(self):
 			
 		filename = filedialog.askopenfilename(title =  self.LanguagePack.ToolTips['SelectSource'],filetypes = (("Template files", "*.jpg *.png"), ), multiple = False)	
