@@ -1061,6 +1061,7 @@ class Automation_Execuser(Frame):
 				if arg_data['variable_type'] in ['string', 'int', 'float']:
 					arg_data['widget'] = Text(child_windows, height = 1, width=30)
 					arg_data['widget'].grid(row=row,column=2, padx=10, pady=10, sticky=S)
+					arg_data['widget'].bind('<Return>', lambda event, c=child_windows, a=arg_data_list: self.Store_Input_Value_On_Closing(c,a))
 				elif arg_data['variable_type'] == 'string_id':
 					arg_data['value_variable'] = StringVar()
 					value_list = [*self.AutoTester.UI]
@@ -1072,6 +1073,7 @@ class Automation_Execuser(Frame):
 						arg_data['widget'].set_completion_list(value_list)
 						arg_data['widget'].Set_Entry_Width(35)
 						arg_data['widget'].grid(row=row,column=2, padx=10, pady=10, sticky=W+S)
+						arg_data['widget'].bind('<Return>', lambda event, c=child_windows, a=arg_data_list: self.Store_Input_Value_On_Closing(c,a))
 					else:
 						continue	
 				elif arg_data['variable_type'] == 'user_list':
@@ -1084,6 +1086,7 @@ class Automation_Execuser(Frame):
 					arg_data['widget'].set_completion_list(value_list)
 					arg_data['widget'].Set_Entry_Width(35)
 					arg_data['widget'].grid(row=row,column=2, padx=10, pady=10, sticky=W+S)
+					arg_data['widget'].bind('<Return>', lambda event, c=child_windows, a=arg_data_list: self.Store_Input_Value_On_Closing(c,a))
 				elif arg_data['variable_type'] == 'point':
 					arg_data['widget'] = Text(child_windows, height = 1, width=30)
 					arg_data['widget'].grid(row=row,column=2, padx=10, pady=10, sticky=W)
@@ -1097,6 +1100,7 @@ class Automation_Execuser(Frame):
 				elif arg_data['variable_type'] == 'area':
 					arg_data['widget'] = Text(child_windows, height = 1, width=30)
 					arg_data['widget'].grid(row=row,column=2, padx=10, pady=10, sticky=S)
+					arg_data['widget'].bind('<Return>', lambda event, c=child_windows, a=arg_data_list: self.Store_Input_Value_On_Closing(c,a))
 					if self.AutoTester.Device != None:
 						btn_status = NORMAL
 					else:
@@ -1107,6 +1111,7 @@ class Automation_Execuser(Frame):
 				elif arg_data['variable_type'] == 'current_area':
 					arg_data['widget'] = Text(child_windows, height = 1, width=30)
 					arg_data['widget'].grid(row=row,column=2, padx=10, pady=10, sticky=S)
+					arg_data['widget'].bind('<Return>', lambda event, c=child_windows, a=arg_data_list: self.Store_Input_Value_On_Closing(c,a))
 					if self.AutoTester.Device != None:
 						btn_status = NORMAL
 					else:
@@ -1176,6 +1181,7 @@ class Automation_Execuser(Frame):
 				if arg_data['variable_type'] in ['string', 'int', 'float']:
 					arg_data['widget'] = Text(child_windows, height = 1, width=30)
 					arg_data['widget'].grid(row=row,column=2, padx=10, pady=10, sticky=S)
+					arg_data['widget'].bind('<Return>', lambda event, c=child_windows,x= this_type, y= this_action,i=treeview_node, a=arg_data_list: self.Modify_Input_Value_On_Closing(c,a,x, y, i))
 					try:	
 						arg_data['widget'].insert("end", value[value_index])
 					except Exception as e:
@@ -1192,6 +1198,7 @@ class Automation_Execuser(Frame):
 					arg_data['widget'].set_completion_list(value_list)
 					arg_data['widget'].Set_Entry_Width(35)
 					arg_data['widget'].grid(row=row,column=2, padx=10, pady=10, sticky=W+S)
+					arg_data['widget'].bind('<Return>', lambda event, c=child_windows,x= this_type, y= this_action,i=treeview_node, a=arg_data_list: self.Modify_Input_Value_On_Closing(c,a,x, y, i))
 					try:	
 						arg_data['widget'].set(value[value_index])
 					except Exception as e:
@@ -1208,6 +1215,7 @@ class Automation_Execuser(Frame):
 					arg_data['widget'].set_completion_list(value_list)
 					arg_data['widget'].Set_Entry_Width(35)
 					arg_data['widget'].grid(row=row,column=2, padx=10, pady=10, sticky=S)
+					arg_data['widget'].bind('<Return>', lambda event, c=child_windows,x= this_type, y= this_action,i=treeview_node, a=arg_data_list: self.Modify_Input_Value_On_Closing(c,a,x, y, i))
 					try:
 						
 						arg_data['widget'].set(value_list[value[value_index]])
@@ -1217,6 +1225,7 @@ class Automation_Execuser(Frame):
 				elif arg_data['variable_type'] == 'point':
 					arg_data['widget'] = Text(child_windows, height = 1, width=30)
 					arg_data['widget'].grid(row=row,column=2, padx=10, pady=10, sticky=W+S)
+					arg_data['widget'].bind('<Return>', lambda event, c=child_windows,x= this_type, y= this_action,i=treeview_node, a=arg_data_list: self.Modify_Input_Value_On_Closing(c,a,x, y, i))
 					if self.AutoTester.Device != None:
 						btn_status = NORMAL
 					else:
@@ -1231,6 +1240,7 @@ class Automation_Execuser(Frame):
 				elif arg_data['variable_type'] == 'area':
 					arg_data['widget'] = Text(child_windows, height = 1, width=30)
 					arg_data['widget'].grid(row=row,column=2, padx=10, pady=10, sticky=S)
+					arg_data['widget'].bind('<Return>', lambda event, c=child_windows,x= this_type, y= this_action,i=treeview_node, a=arg_data_list: self.Modify_Input_Value_On_Closing(c,a,x, y, i))
 					if self.AutoTester.Device != None:
 						btn_status = NORMAL
 					else:
@@ -1246,6 +1256,7 @@ class Automation_Execuser(Frame):
 				elif arg_data['variable_type'] == 'current_area':
 					arg_data['widget'] = Text(child_windows, height = 1, width=30)
 					arg_data['widget'].grid(row=row,column=2, padx=10, pady=10, sticky=S)
+					arg_data['widget'].bind('<Return>', lambda event, c=child_windows,x= this_type, y= this_action,i=treeview_node, a=arg_data_list: self.Modify_Input_Value_On_Closing(c,a,x, y, i))
 					if self.AutoTester.Device != None:
 						btn_status = NORMAL
 					else:
