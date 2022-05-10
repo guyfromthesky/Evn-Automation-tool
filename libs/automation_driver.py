@@ -167,8 +167,8 @@ class Automation:
 						
 				Status_Queue.put('Execute action: ' + str(_test_name))
 				#Status_Queue.put('Execute value: ' + str(self.Execution_Value))
-				result = function_object(**kwarg)
-				Status_Queue.put('Execute result: '+ _test_name + '->' + str(result))
+				self.Last_Result = function_object(**kwarg)
+				Status_Queue.put('Execute result: '+ _test_name + '->' + str(self.Last_Result))
 			elif _block_type == "condition":
 				_condition_string = chain['condition_string']
 				print('Checking condition:', _condition_string)
@@ -180,6 +180,8 @@ class Automation:
 					self.Function_Execute_Block(Status_Queue, Progress_Queue, Pause_Status, Code_Block)
 			elif _block_type == "Comment":
 				#Status_Queue.put('Execute result: '+ _test_name + '->' + str(result))
+				continue
+			elif _block_type == "Get_Result":
 				continue
 
 	def Function_Load_Module(self, Module_Path):
@@ -199,7 +201,7 @@ class Automation:
 				real_f = getattr(mymodule, function)
 				a = real_f()
 				setattr(self, real_f.__name__, getattr(a, 'func'))
-				self.append_action_list(type = 'Action', name = real_f.__name__ , argument = a.kwarg, description= '')
+				self.append_action_list(type = 'Custom', name = real_f.__name__ , argument = a.kwarg, description= '')
 			
 			self.append_action_list(type = 'Action', name = 'Send_Enter_Key', argument = None, 
 				description= 'Press ENTER key on the phone, which will move the focus to the next widget.')
