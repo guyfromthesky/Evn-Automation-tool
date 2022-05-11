@@ -338,7 +338,7 @@ class Automation_Execuser(Frame):
 	
 		Row+=1
 		Label(Tab, text= self.LanguagePack.Label['ActionType'], width= 20).grid(row=Row, column=1, columnspan=2, padx=5, pady=5, sticky=W)
-		action_type_list = ['', 'Loop', 'Condition', 'Get_Result', 'Action', 'Update_Variable', 'Comment']
+		action_type_list = ['', 'Loop', 'Condition', 'Get_Result', 'Action', 'Update_Variable', 'Comment', 'Custom']
 		action_type_list.sort()
 		self.current_action_type.set(action_type_list[0])
 		# creating widget
@@ -412,7 +412,7 @@ class Automation_Execuser(Frame):
 		TreeView_Row = start_row
 		TreeView_Size = row_span
 		Treeview_Col = 9
-		self.Treeview = Treeview(Tab)
+		self.Treeview = Treeview(Tab, show='tree')
 		self.Focused_Item = None
 		self.Treeview.grid(row=TreeView_Row, column=1, columnspan=Treeview_Col, rowspan=20, padx=5, pady=5, sticky = W+E)
 		verscrlbar = Scrollbar(Tab, orient ="vertical", command = self.Treeview.yview)
@@ -421,7 +421,7 @@ class Automation_Execuser(Frame):
 		self.Treeview.Scrollable = True
 		self.Treeview['columns'] = ('Type', 'Action', 'Arg1', 'Arg2', 'Arg3', 'Arg4', 'Arg5', 'Arg6')
 
-		self.Treeview.column('#0', width=0, stretch=NO)
+		self.Treeview.column('#0', width=25, stretch=NO)
 		self.Treeview.heading('#0', text='', anchor=CENTER)
 
 		for column in self.Treeview['columns']:
@@ -474,7 +474,7 @@ class Automation_Execuser(Frame):
 		Label(Tab, text= 'Custom Action').grid(row=Row, column=1, padx=5, pady=5, sticky=W)
 		self.Entry_CustomAction_Path = Entry(Tab,width = 100, state="readonly", textvariable=self.Text_CustomAction_Path)
 		self.Entry_CustomAction_Path.grid(row=Row, column=3, columnspan=5, padx=5, pady=5, sticky=E+W)
-		Button(Tab, width = self.Button_Width_Full, text=  self.LanguagePack.Button['Browse'], command= self.Btn_Browse_DB_File).grid(row=Row, column=9, columnspan=2, padx=5, pady=5, sticky=E)
+		Button(Tab, width = self.Button_Width_Full, text=  self.LanguagePack.Button['Browse'], command= self.Btn_Browse_Custom_Action_File).grid(row=Row, column=9, columnspan=2, padx=5, pady=5, sticky=E)
 		
 	def Generate_Debugger_UI(self,Tab):
 		Row = 1
@@ -533,6 +533,22 @@ class Automation_Execuser(Frame):
 			self.Write_Debug(self.LanguagePack.ToolTips['DataSelected'] + ": " + self.DB_Path)
 
 	
+		else:
+			self.Write_Debug(self.LanguagePack.ToolTips['SourceDocumentEmpty'])
+		return
+
+	def Btn_Browse_Custom_Action_File(self):
+			
+		filename = filedialog.askopenfilename(title =  self.LanguagePack.ToolTips['SelectSource'], filetypes = (("Workbook files", "*.py"), ), multiple = False)	
+		if filename != "":
+			custom_action_path = self.CorrectPath(filename)
+			custom_action_path = os.path.dirname(self.DB_Path)
+			Init_Folder(custom_action_path)
+			self.Text_CustomAction_Path.set(self.DB_Path)
+			
+			self.AppConfig.Save_Config(self.AppConfig.Auto_Tool_Config_Path, 'AUTO_TOOL', 'custom_action', custom_action_path, True)
+			self.AutoTester.Update_DB_Path(self.DB_Path)
+			self.Write_Debug(self.LanguagePack.ToolTips['DataSelected'] + ": " + custom_action_path)
 		else:
 			self.Write_Debug(self.LanguagePack.ToolTips['SourceDocumentEmpty'])
 		return
@@ -747,7 +763,7 @@ class Automation_Execuser(Frame):
 			index = self.Treeview.index(child_obj)
 			index_list.append(index)
 		index_list.sort()	
-
+		
 		if len(selected) == 0:
 			start = 'end'
 			end = 'end'
@@ -773,13 +789,36 @@ class Automation_Execuser(Frame):
 				return
 
 		#self.Treeview.insert('', start, text= '', values = [this_type, this_action], tags= this_tag)
-		self.Treeview.insert('', start, text= '', values = [*self.Current_Arg_Value], tags= this_tag)
-		if self.Current_Arg_Type == 'Loop':
-			self.Treeview.insert('', end, text= '', values=['Loop','End Loop'], tags= this_tag)
-		elif self.Current_Arg_Type == 'Condition':
-			self.Treeview.insert('', end, text= '', values= ['Condition', 'End If'], tags= this_tag)
+		
+		if self.Current_Arg_Type in ['Loop', 'Condition']:
+			# Prepare for future usage
+			'''
+			if len(index_list) > 0:
+				print('index_list', index_list)
+				start = index_list[0]
+				end = index_list[-1]+2
+
+				parent = self.Treeview.insert('', start, text= '', values = [*self.Current_Arg_Value], tags= this_tag, open=True)
+
+				_child_index = 0
+				leaves = self.Treeview.selection()
+				for i in leaves:
+					#print('Moving', i, 'to', start)
+					self.Treeview.move(i, parent, str(_child_index))
+					_child_index+=1
+				#end_of_list = self.Treeview.insert('', end, text= '', values=['Loop','End Loop'])
+			'''
+			if self.Current_Arg_Type == 'Loop':
+				self.Treeview.insert('', end, text= '', values=['Loop','End Loop'], tags= this_tag)
+			#self.Current_Arg_Type == 'Condition':
+			else:
+				self.Treeview.insert('', end, text= '', values= ['Condition', 'End If'], tags= this_tag)
+			
+			
+			#self.Treeview.move(end_of_list, parent, str(_child_index + 1))
+			
 		else:
-			print('Type:', self.Current_Arg_Type)	
+			self.Treeview.insert('', start, text= '', values = [*self.Current_Arg_Value], tags= this_tag)
 		
 		#index = self.Treeview.index(self.Treeview.focus()) + 1
 		#self.Generate_Arg_Input_Window(index_list[-1]+1, index_list[-1]+2)	
@@ -855,12 +894,24 @@ class Automation_Execuser(Frame):
 			self.Treeview.insert('', start, text= '', values = self.Current_Arg_Value)
 
 		if self.Current_Arg_Type == 'Loop':
+			_child_index = 0
+			leaves = self.Treeview.selection()
+			for i in leaves:
+				self.Treeview.move(i, int(start), _child_index)
+				print(i)
+				
+				self.Treeview.move(i, int(start), _child_index)
+				_child_index+=1
 			self.Treeview.insert('', end, text= '', values=['Loop','End Loop'])
 		elif self.Current_Arg_Type == 'Condition':
 			self.Treeview.insert('', end, text= '', values= ['Condition', 'End If'])
 		else:
-			print('Type:', self.Current_Arg_Type)		
-		
+			print('Type:', self.Current_Arg_Type)
+
+		# This part is prepared for the future usage
+		if self.Current_Arg_Type == 'Loop':
+			for i in range(start, end):
+				print(i)
 		
 	def move_treeview_up(self):
 		leaves = self.Treeview.selection()
@@ -996,6 +1047,8 @@ class Automation_Execuser(Frame):
 				return
 		this_arg = self.action_dict[this_type][action_name]
 		self.btn_add_step.configure(state=DISABLED)
+		
+		self.Input_Windows = False
 		print('this_arg', action_name, this_arg)
 		
 	# This is temporary work, we need to add the value of the arg instead of the arg name.
@@ -1442,7 +1495,9 @@ class Automation_Execuser(Frame):
 		self.btn_add_step.configure(state=NORMAL)
 		if child_windows != None:
 			child_windows.destroy()
-		self.Input_Windows == False	
+			
+		self.Input_Windows = False	
+
 		#self.btn_add_step.configure(state=NORMAL)
 
 	def Modify_Input_Value_On_Closing(self,child_windows, arg_data_list, this_type= None, this_action= None, treeview_node= None):
@@ -1485,7 +1540,7 @@ class Automation_Execuser(Frame):
 
 		if child_windows != None:
 			child_windows.destroy()	
-		self.Input_Windows == False	
+		self.Input_Windows = False	
 
 	def get_location_on_click(self):
 		img = self.AutoTester.Get_Current_Screenshot()
@@ -1504,7 +1559,7 @@ class Automation_Execuser(Frame):
 	def Update_Action_List(self):
 
 		print('Update action list to drop list')
-		action_type = ['Action', 'Loop', 'Condition', 'Get_Result', 'Update_Variable', 'Comment']
+		action_type = ['Action', 'Loop', 'Condition', 'Get_Result', 'Update_Variable', 'Comment', 'Custom']
 		action_type.sort()
 		self.action_dict = {}
 		for type in action_type:
@@ -1569,6 +1624,9 @@ class Automation_Execuser(Frame):
 		else:	
 			self.current_action_name.set("")	
 		self.btn_add_step.configure(state=DISABLED)
+
+		self.Input_Windows == False	
+
 		
 	def ImportTestCase(self, Test_Case_File_Path):
 		print('Loading My Dictionary')
@@ -2033,7 +2091,10 @@ class Automation_Execuser(Frame):
 		if len(Test_Object) < 1:
 			messagebox.showinfo('Error...', 'Please add at least 1 action before running the application')
 			return
-	 	
+
+		_module_path = self.Entry_CustomAction_Path.get()
+		print('_module_path', _module_path)
+
 		_kwargs= {	'Status_Queue' : self.Status_Queue, 
 					'Result_Queue' : self.Result_Queue, 
 					'Progress_Queue': self.Process_Queue,
@@ -2047,7 +2108,8 @@ class Automation_Execuser(Frame):
 					'Result_Folder_Path' : Result_Folder_Path,
 					'Result_File_Path': Result_File_Path,
 					'TestCaseObject' : Test_Object,
-					'Execute_List' : _Execute_Value, 
+					'Execute_List' : _Execute_Value,
+					'Module_Path' : _module_path
 				}	
 		self.Automation_Processor = Process(target = Function_Execute_Script, kwargs= _kwargs,)
 		self.Automation_Processor.start()
@@ -2092,15 +2154,14 @@ class Automation_Execuser(Frame):
 ###########################################################################################
 
 def Function_Execute_Script(
-		Status_Queue, Progress_Queue, Result_Queue, Serial, DB_Path, Tess_Path, Tess_Data, Resolution, Language, Result_Folder_Path, Result_File_Path, TestCaseObject = [], Execute_List = None, **kwargs
-):
+		Status_Queue, Progress_Queue, Result_Queue, Serial, DB_Path, Tess_Path, Tess_Data, Resolution, Language, Result_Folder_Path, Result_File_Path, TestCaseObject = [], Execute_List = None, Module_Path = None, **kwargs):
 	
 	#print("All variable:", locals())
 	Status_Queue.put("Importing test case config")
 	Start = time.time()
 	#_kwargs = 
 	AutoTester = Tester(Status_Queue = Status_Queue, Serial = Serial, DB_Path= DB_Path, Result_Folder_Path= Result_Folder_Path, Resolution = Resolution, 
-				Language = Language, Tess_Path = Tess_Path, Tess_Data = Tess_Data)
+				Language = Language, Tess_Path = Tess_Path, Tess_Data = Tess_Data, Module_Path = Module_Path)
 
 	#os.system( ADBPATH + ' forward tcp:9889 tcp:9889')
 

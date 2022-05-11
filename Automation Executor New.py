@@ -791,6 +791,8 @@ class Automation_Execuser(Frame):
 		#self.Treeview.insert('', start, text= '', values = [this_type, this_action], tags= this_tag)
 		
 		if self.Current_Arg_Type in ['Loop', 'Condition']:
+			# Prepare for future usage
+			'''
 			if len(index_list) > 0:
 				print('index_list', index_list)
 				start = index_list[0]
@@ -805,14 +807,16 @@ class Automation_Execuser(Frame):
 					self.Treeview.move(i, parent, str(_child_index))
 					_child_index+=1
 				#end_of_list = self.Treeview.insert('', end, text= '', values=['Loop','End Loop'])
-				if self.Current_Arg_Type == 'Loop':
-					end_of_list = self.Treeview.insert('', end, text= '', values=['Loop','End Loop'], tags= this_tag)
-				#self.Current_Arg_Type == 'Condition':
-				else:
-					end_of_list = self.Treeview.insert('', end, text= '', values= ['Condition', 'End If'], tags= this_tag)
-				self.Treeview.move(end_of_list, parent, str(_child_index + 1))
+			'''
+			if self.Current_Arg_Type == 'Loop':
+				self.Treeview.insert('', end, text= '', values=['Loop','End Loop'], tags= this_tag)
+			#self.Current_Arg_Type == 'Condition':
 			else:
-				self.Treeview.insert('', start, text= '', values = [*self.Current_Arg_Value], tags= this_tag, open=True)		
+				self.Treeview.insert('', end, text= '', values= ['Condition', 'End If'], tags= this_tag)
+			
+			
+			#self.Treeview.move(end_of_list, parent, str(_child_index + 1))
+			
 		else:
 			self.Treeview.insert('', start, text= '', values = [*self.Current_Arg_Value], tags= this_tag)
 		

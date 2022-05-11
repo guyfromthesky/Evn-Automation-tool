@@ -140,7 +140,7 @@ class Automation:
 						break
 					else:
 						continue
-
+			print('chain', chain)
 			_block_type = chain['type']
 			Code_Block = chain['execute_block']
 			_current_list_value = chain['current_list_value']
@@ -149,13 +149,25 @@ class Automation:
 				self.Execution_Value = _current_list_value
 			else:
 				self.Execution_Value = []
-		
-			if _block_type == "action":
+			if _block_type == "Comment":
+				continue
+			elif _block_type == "Get_Result":
+				# For future use.
+				continue
+			elif _block_type == "action":
 				
 				kwarg = {}
 				_test_name = Code_Block['name']
 			
 				_arg_list = Code_Block['arg']
+
+				_block_type = Code_Block['type']
+				if _block_type == 'Comment':
+					continue
+				elif _block_type == "Get_Result":
+					# For future use.
+					continue
+
 				function_object = getattr(self, _test_name)
 				if len(_arg_list) > 0:	
 					for _temp_arg in _arg_list:
@@ -165,10 +177,11 @@ class Automation:
 						if _raw_value != '':
 							kwarg[_temp_arg['name']] = self.Function_Parse_Data(_value_type,_raw_value)
 						
-				Status_Queue.put('Execute action: ' + str(_test_name))
+				#Status_Queue.put('Execute action: ' + str(_test_name))
 				#Status_Queue.put('Execute value: ' + str(self.Execution_Value))
 				self.Last_Result = function_object(**kwarg)
-				Status_Queue.put('Execute result: '+ _test_name + '->' + str(self.Last_Result))
+				Status_Queue.put('Execute action: ' + _test_name + ': ' + str(kwarg))
+				Status_Queue.put('Execute result: ' + 'Result: ' + str(self.Last_Result))
 			elif _block_type == "condition":
 				_condition_string = chain['condition_string']
 				print('Checking condition:', _condition_string)
@@ -178,11 +191,8 @@ class Automation:
 					_check_condition = False
 				if _check_condition == True:
 					self.Function_Execute_Block(Status_Queue, Progress_Queue, Pause_Status, Code_Block)
-			elif _block_type == "Comment":
-				#Status_Queue.put('Execute result: '+ _test_name + '->' + str(result))
-				continue
-			elif _block_type == "Get_Result":
-				continue
+		
+			
 
 	def Function_Load_Module(self, Module_Path):
 		# Need to run again in main Automation lib
