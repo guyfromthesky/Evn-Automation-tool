@@ -36,11 +36,7 @@ class Automation:
 	# DB: Database's Path.
 	def __init__(self, Status_Queue, Resolution = '1080', Language = 'en', Tess_Path = None, Tess_Data = None, Serial = None, DB_Path = None, Result_Folder_Path = None, Module_Path = None):
 		self.Debugger = Status_Queue
-		
 		self.Client = AdbClient(host="127.0.0.1", port=5037)
-
-		
-
 		self.Gacha_Pool = []
 		self.Execution_List = []
 		self.Current_Value = None
@@ -62,8 +58,7 @@ class Automation:
 		self.LoopList = False
 		self.Resolution = Resolution
 		self.Ratio = 1
-		print('Serial', Serial)
-		print('Client', self.Client)
+
 		if Serial != None:	
 			self.Serial = Serial
 			if self.Client != None:	
@@ -79,20 +74,20 @@ class Automation:
 			self.Function_Import_DB(DB_Path)
 
 		self.Update_Action_List()
-
+		print('Module_Path:', Module_Path)
 		if Module_Path != None:
 			self.Function_Load_Module(Module_Path)
 
 	def append_action_list(self, type = None, name = None, argument = [], description = ''):
-	
 		_action = {}
 		_action['type'] = type
 		_action['name'] = name
 		_action['arg'] = argument
 		_action['description'] = description
-
 		self.action_list.append(_action)
-		return _action
+
+	def append_action_object(self, object):
+		self.action_list.append(object)	
 
 	def Function_Parse_Data(self, data_type, data_value):
 		print('Locals:', locals())
@@ -142,6 +137,7 @@ class Automation:
 						continue
 			print('chain', chain)
 			_block_type = chain['type']
+			print('_block_type', _block_type)
 			Code_Block = chain['execute_block']
 			_current_list_value = chain['current_list_value']
 			
@@ -151,53 +147,72 @@ class Automation:
 				self.Execution_Value = []
 			if _block_type == "Comment":
 				continue
+			elif _block_type == "Update_Variable":
+				# There is no plan to use this block type right now
+				self.Current_Variable = self.Last_Result
+				continue
 			elif _block_type == "Get_Result":
 				# For future use.
 				continue
 			elif _block_type == "action":
-				
-				kwarg = {}
-				_test_name = Code_Block['name']
-			
-				_arg_list = Code_Block['arg']
-
-				_block_type = Code_Block['type']
-				if _block_type == 'Comment':
-					continue
-				elif _block_type == "Get_Result":
-					# For future use.
-					continue
-
-				function_object = getattr(self, _test_name)
-				if len(_arg_list) > 0:	
-					for _temp_arg in _arg_list:
-						#print('_temp_arg', _temp_arg)
-						_value_type = _temp_arg['type']
-						_raw_value = _temp_arg['value']
-						if _raw_value != '':
-							kwarg[_temp_arg['name']] = self.Function_Parse_Data(_value_type,_raw_value)
-						
-				#Status_Queue.put('Execute action: ' + str(_test_name))
-				#Status_Queue.put('Execute value: ' + str(self.Execution_Value))
-				self.Last_Result = function_object(**kwarg)
-				Status_Queue.put('Execute action: ' + _test_name + ': ' + str(kwarg))
-				Status_Queue.put('Execute result: ' + 'Result: ' + str(self.Last_Result))
+				self.Function_Execute_Chain(Status_Queue, Code_Block)	
 			elif _block_type == "condition":
 				_condition_string = chain['condition_string']
-				print('Checking condition:', _condition_string)
+				#print('Checking condition:', _condition_string)
 				try:
 					_check_condition = eval(_condition_string)
 				except: 
 					_check_condition = False
 				if _check_condition == True:
 					self.Function_Execute_Block(Status_Queue, Progress_Queue, Pause_Status, Code_Block)
+
+	def Function_Execute_Chain(self, Status_Queue, Chain):
+		print('Current chain:', Chain)
+		_block_type = Chain['type']
+		_test_name = Chain['name']
+		_arg_list = Chain['arg']
+		if _block_type == "If_True":
+			if self.Last_Result['Status'] not in ['True', 'Pass']:
+				Status_Queue.put('Execute action: ' + _test_name)
+				Status_Queue.put('Execute result: ' + 'Activated condition are not matched, skip this block')
+				return
+		elif _block_type == "If_False":
+			print('If_False', self.Last_Result)
+			if self.Last_Result['Status'] not in ['False', 'Fail']:
+				Status_Queue.put('Execute action: ' + _test_name)
+				Status_Queue.put('Execute result: ' + 'Activated condition are not matched, skip this block')
+				return
+
+		kwarg = {}
 		
-			
+		function_object = getattr(self, _test_name)
+		if len(_arg_list) > 0:	
+			for _temp_arg in _arg_list:
+				_value_type = _temp_arg['type']
+				_raw_value = _temp_arg['value']
+				if _raw_value != '':
+					kwarg[_temp_arg['name']] = self.Function_Parse_Data(_value_type,_raw_value)
+		self.Last_Result = function_object(**kwarg)
+		Status_Queue.put('Execute action: ' + _test_name + ': ' + str(kwarg))
+		Status_Queue.put('Execute result: ' + 'Result: ' + str(self.Last_Result))
+
 
 	def Function_Load_Module(self, Module_Path):
 		# Need to run again in main Automation lib
-		for file_path in Module_Path:
-			loader = importlib.machinery.SourceFileLoader( 'mymodule', file_path)
+		# Check if Module_Path is a file or a directory
+		module_list = []
+		if os.path.isdir(Module_Path):
+			# If it is a directory, load all files in the directory
+			for _file_path in os.listdir(Module_Path):
+				if _file_path.endswith('.py'):
+					module_list.append(_file_path)
+			
+		elif os.path.isfile(Module_Path):
+			if Module_Path.endswith('.py'):
+					module_list.append(Module_Path)
+		print('Module_List:', module_list)	
+		for _path in module_list:
+			loader = importlib.machinery.SourceFileLoader( 'mymodule', _path)
 			spec = importlib.util.spec_from_loader( 'mymodule', loader )
 			mymodule = importlib.util.module_from_spec( spec )
 			
@@ -215,8 +230,6 @@ class Automation:
 			
 			self.append_action_list(type = 'Action', name = 'Send_Enter_Key', argument = None, 
 				description= 'Press ENTER key on the phone, which will move the focus to the next widget.')
-
-
 
 	def Function_Generate_TestCase(self, TestCase_Object, Execution_List, _current_execution_value = None, recursion_type = None, start_index = None):
 
@@ -711,7 +724,17 @@ class Automation:
 				description= 'Can be used within the Loop List. Tap the current item declare in the execution list')
 			self.append_action_list(type = 'Action', name = 'Wait_For_Current_Item', argument = {'indexer': 'user_list'}, 
 				description= 'Can be used within the Loop List. Wait for an item declare in the execution list, and tap on it.')
-			
+
+		# Append condition action
+		for action in self.action_list:
+			if action['type'] == 'Action':
+				true_action = action.copy()
+				true_action['type'] = 'If_True'
+				self.append_action_object(true_action)
+				false_action = action.copy()
+				false_action['type'] = 'If_False'
+				self.append_action_object(false_action)
+		#print(self.action_list)		
 		#self.append_action_list(type = 'Action', name = 'Test_Tap', argument = {'touch_point': 'point', '2nd_touch_point': 'point'}, description= '')
 
 	def Get_Current_Screenshot(self):

@@ -63,6 +63,8 @@ DELAY2 = 100
 DELAY3 = 200
 IDLING_CHECK = 0
 
+SUPPORTED_TYPE = ['Action', 'Loop', 'Condition', 'If_True', 'If_False', 'Get_Result', 'Update_Variable', 'Comment', 'Custom']
+
 #**********************************************************************************
 # UI handle ***********************************************************************
 #**********************************************************************************
@@ -338,7 +340,7 @@ class Automation_Execuser(Frame):
 	
 		Row+=1
 		Label(Tab, text= self.LanguagePack.Label['ActionType'], width= 20).grid(row=Row, column=1, columnspan=2, padx=5, pady=5, sticky=W)
-		action_type_list = ['', 'Loop', 'Condition', 'Get_Result', 'Action', 'Update_Variable', 'Comment', 'Custom']
+		action_type_list = [''] + SUPPORTED_TYPE
 		action_type_list.sort()
 		self.current_action_type.set(action_type_list[0])
 		# creating widget
@@ -412,7 +414,7 @@ class Automation_Execuser(Frame):
 		TreeView_Row = start_row
 		TreeView_Size = row_span
 		Treeview_Col = 9
-		self.Treeview = Treeview(Tab, show='tree')
+		self.Treeview = Treeview(Tab, show='tree headings')
 		self.Focused_Item = None
 		self.Treeview.grid(row=TreeView_Row, column=1, columnspan=Treeview_Col, rowspan=20, padx=5, pady=5, sticky = W+E)
 		verscrlbar = Scrollbar(Tab, orient ="vertical", command = self.Treeview.yview)
@@ -421,7 +423,7 @@ class Automation_Execuser(Frame):
 		self.Treeview.Scrollable = True
 		self.Treeview['columns'] = ('Type', 'Action', 'Arg1', 'Arg2', 'Arg3', 'Arg4', 'Arg5', 'Arg6')
 
-		self.Treeview.column('#0', width=25, stretch=NO)
+		self.Treeview.column('#0', width=0, stretch=NO)
 		self.Treeview.heading('#0', text='', anchor=CENTER)
 
 		for column in self.Treeview['columns']:
@@ -543,11 +545,11 @@ class Automation_Execuser(Frame):
 		if filename != "":
 			custom_action_path = self.CorrectPath(filename)
 			custom_action_path = os.path.dirname(self.DB_Path)
-			Init_Folder(custom_action_path)
-			self.Text_CustomAction_Path.set(self.DB_Path)
+			#Init_Folder(custom_action_path)
+			self.Text_CustomAction_Path.set(custom_action_path)
 			
 			self.AppConfig.Save_Config(self.AppConfig.Auto_Tool_Config_Path, 'AUTO_TOOL', 'custom_action', custom_action_path, True)
-			self.AutoTester.Update_DB_Path(self.DB_Path)
+			#self.AutoTester.Update_DB_Path(self.DB_Path)
 			self.Write_Debug(self.LanguagePack.ToolTips['DataSelected'] + ": " + custom_action_path)
 		else:
 			self.Write_Debug(self.LanguagePack.ToolTips['SourceDocumentEmpty'])
@@ -720,37 +722,6 @@ class Automation_Execuser(Frame):
 			to_remove.append(tm_index)
 			self.Treeview.delete(child_obj)
 
-	# Obsoleted.
-	def double_right_click_treeview(self, event):
-		'''
-		Function activate when double click an entry from Treeview
-		'''
-		focused = self.Treeview.focus()
-		child = self.Treeview.item(focused)
-		
-		self.Debugger.insert("end", "\n")
-		self.Debugger.insert("end", 'Korean: ' + str(child["text"]))
-		self.Debugger.insert("end", "\n")
-		self.Debugger.insert("end", 'English: ' + str(child["values"][0]))
-		self.Debugger.yview(END)
-
-
-	# Nam will check
-	def load_tm_list(self):
-		"""
-		When clicking the [Load] button in TM Manager tab
-		Display the pair languages in the text box.
-		"""
-		self.remove_treeview()
-		
-		_area_list = []
-
-		for location in _area_list:	
-			try:
-				self.Treeview.insert('', 'end', text= '', values=( str(location['index']), str(location['x']), str(location['y']), str(location['h']), str(location['w'])))
-			except:
-				pass
-
 	def add_treeview_row(self):
 		'''
 		Add a row to the current Treeview
@@ -824,7 +795,7 @@ class Automation_Execuser(Frame):
 		#self.Generate_Arg_Input_Window(index_list[-1]+1, index_list[-1]+2)	
 
 		
-
+	# NOT USE
 	def insert_treeview_above(self):
 		'''
 		Add a row above the current Treeview
@@ -868,6 +839,7 @@ class Automation_Execuser(Frame):
 		else:
 			print('Type:', self.Current_Arg_Type)	
 
+	# NOT USE
 	def insert_treeview_below(self):
 		'''
 		Add a row below the current Treeview
@@ -965,7 +937,9 @@ class Automation_Execuser(Frame):
 		for i in reversed(self.coppied_list):
 			child = self.Treeview.item(i)
 			values = child['values']
-			self.Treeview.insert('', _end_index, text= '', values=values)
+			this_tag = values[0].lower()
+			self.Treeview.insert('', 'end', text= '', values=values, tags= this_tag)
+			#self.Treeview.insert('', _end_index, text= '', values=values)
 
 			if self.is_cut == True:
 				self.Treeview.delete(i)
@@ -1559,7 +1533,7 @@ class Automation_Execuser(Frame):
 	def Update_Action_List(self):
 
 		print('Update action list to drop list')
-		action_type = ['Action', 'Loop', 'Condition', 'Get_Result', 'Update_Variable', 'Comment', 'Custom']
+		action_type = SUPPORTED_TYPE
 		action_type.sort()
 		self.action_dict = {}
 		for type in action_type:
@@ -1595,7 +1569,7 @@ class Automation_Execuser(Frame):
 			self.AutoTester.append_action_list(type = 'Action', name = real_f.__name__ , argument = a.kwarg, description= '')
 
 		print('Update action list to drop list')
-		action_type = ['Action', 'Loop', 'Condition', 'Get_Result', 'Update_Variable']
+		action_type = SUPPORTED_TYPE
 		action_type.sort()
 		self.action_dict = {}
 		for type in action_type:
@@ -2056,7 +2030,6 @@ class Automation_Execuser(Frame):
 			_Execute_Value = [self.Execute_List_values[_indexer]]
 		else:
 			# Loop all list
-			
 			_Execute_Value = self.Execute_List_values
 
 		
@@ -2082,7 +2055,7 @@ class Automation_Execuser(Frame):
 		
 		_serial = self.TextSerial.get()
 		Test_Object =  self.Create_Test_Object_List()
-
+		
 		_tess_language = self.option_working_language.get()
 		self.Auto_Setting_Set_Working_Language(_tess_language)
 	
@@ -2093,7 +2066,6 @@ class Automation_Execuser(Frame):
 			return
 
 		_module_path = self.Entry_CustomAction_Path.get()
-		print('_module_path', _module_path)
 
 		_kwargs= {	'Status_Queue' : self.Status_Queue, 
 					'Result_Queue' : self.Result_Queue, 
