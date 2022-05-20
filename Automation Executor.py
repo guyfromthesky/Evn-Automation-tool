@@ -760,7 +760,8 @@ class Automation_Execuser(Frame):
 				return
 
 		#self.Treeview.insert('', start, text= '', values = [this_type, this_action], tags= this_tag)
-		
+
+		self.Treeview.insert('', start, text= '', values = [*self.Current_Arg_Value], tags= this_tag)
 		if self.Current_Arg_Type in ['Loop', 'Condition']:
 			# Prepare for future usage
 			'''
@@ -788,8 +789,7 @@ class Automation_Execuser(Frame):
 			
 			#self.Treeview.move(end_of_list, parent, str(_child_index + 1))
 			
-		else:
-			self.Treeview.insert('', start, text= '', values = [*self.Current_Arg_Value], tags= this_tag)
+		
 		
 		#index = self.Treeview.index(self.Treeview.focus()) + 1
 		#self.Generate_Arg_Input_Window(index_list[-1]+1, index_list[-1]+2)	
