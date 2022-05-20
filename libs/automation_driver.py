@@ -187,21 +187,26 @@ class Automation:
 				Status_Queue.put('Execute result: ' + 'Activated condition are not matched, skip this block')
 				return
 		elif _block_type == "If_False":
-			print('If_False', self.Last_Result)
+			#print('If_False', self.Last_Result)
 			if self.Last_Result['Status'] not in ['False', 'Fail']:
 				Status_Queue.put('Execute action: ' + _test_name)
 				Status_Queue.put('Execute result: ' + 'Activated condition are not matched, skip this block')
 				return
 
+	
 		kwarg = {}
 		
-		function_object = getattr(self, _test_name)
+		
 		if len(_arg_list) > 0:	
 			for _temp_arg in _arg_list:
 				_value_type = _temp_arg['type']
 				_raw_value = _temp_arg['value']
 				if _raw_value != '':
 					kwarg[_temp_arg['name']] = self.Function_Parse_Data(_value_type,_raw_value)
+		if _test_name == 'Comment':
+			#Status_Queue.put('Comment: ' + str(kwarg['comment']))
+			return 
+		function_object = getattr(self, _test_name)
 		self.Last_Result = function_object(**kwarg)
 		Status_Queue.put('Execute action: ' + _test_name + ': ' + str(kwarg))
 		Status_Queue.put('Execute result: ' + 'Result: ' + str(self.Last_Result))
@@ -309,6 +314,8 @@ class Automation:
 								_condition_Block,_current_loop_index = self.Function_Generate_TestCase(TestCase_Object, Execution_List, _current_execution_value, 'condition',  _current_loop_index)	
 							
 								_loop_block_chain = _loop_block_chain + _condition_Block
+							elif _temp_test_type == 'Comment':
+								continue
 							else:
 								_chain = self.chain_warpped('action', _temp_loop_step)
 								_loop_block_chain += _chain
@@ -380,6 +387,8 @@ class Automation:
 									_condition_Block,_current_loop_index = self.Function_Generate_TestCase(TestCase_Object, Execution_List, _current_execution_value, 'condition',  _current_loop_index)	
 									
 									_loop_block_chain = _loop_block_chain + _condition_Block
+								elif _temp_test_type == 'Comment':
+									continue
 								else:
 									_chain = self.chain_warpped('action', _temp_loop_step, current_list_value= _current_execution_value)
 									_loop_block_chain += _chain

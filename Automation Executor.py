@@ -2013,7 +2013,7 @@ class Automation_Execuser(Frame):
 								_arg.append(_current_arg)
 						_index+=1		
 			_test_object['arg'] = _arg
-			print('_test_object', _test_object)	
+			#print('_test_object', _test_object)	
 			Test_Obect_List.append(_test_object)	
 		return Test_Obect_List
 
@@ -2146,13 +2146,13 @@ def Function_Execute_Script(
 
 	result, total = AutoTester.Function_Generate_TestCase(TestCaseObject, Execute_List)
 	print('Generate testcase:')
-	Status_Queue.put('Len of test cases: ' + str(len(TestCaseObject)))
-	Status_Queue.put('Leng of real test case: '+  str(len(result)))
+	Status_Queue.put('Length of test cases: ' + str(len(TestCaseObject)))
+	Status_Queue.put('Length of real test case: '+  str(len(result)))
 
-	#index = 0
-	#for block in result:
-		#index+=1
-		#print('Block:', index, str(block))
+	index = 0
+	for block in result:
+		index+=1
+		print('Block:', index, str(block))
 	
 	
 	Connect_Status = AutoTester.Check_Connectivity()
