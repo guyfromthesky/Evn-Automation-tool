@@ -56,7 +56,7 @@ CWD = os.path.abspath(os.path.dirname(sys.argv[0]))
 ADBPATH = '\"' + CWD + '\\adb\\adb.exe' + '\"'
 #MyTranslatorAgent = 'google'
 TOOL = "Auto Tester"
-VERNUM = ' 1.0.1i'
+VERNUM = ' 1.0.1i + hotfix 1 '
 VERSION = TOOL  + " " +  VERNUM
 DELAY1 = 20
 DELAY2 = 100
@@ -760,8 +760,11 @@ class Automation_Execuser(Frame):
 				return
 
 		#self.Treeview.insert('', start, text= '', values = [this_type, this_action], tags= this_tag)
-
+		# Add row to the Treeview
 		self.Treeview.insert('', start, text= '', values = [*self.Current_Arg_Value], tags= this_tag)
+		
+
+		# Add the end if/condition
 		if self.Current_Arg_Type in ['Loop', 'Condition']:
 			# Prepare for future usage
 			'''
@@ -2200,7 +2203,7 @@ def main():
 	My_Manager = {}
 	My_Manager['Default_Manager'] = Default_Manager
 	Windows = None
-	
+	#Windows = Automation_Execuser(root, Queue = My_Queue, Manager = My_Manager,)
 	try:
 		Windows = Automation_Execuser(root, Queue = My_Queue, Manager = My_Manager,)
 		root.mainloop() 

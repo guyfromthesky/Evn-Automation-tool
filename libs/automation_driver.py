@@ -69,10 +69,20 @@ class Automation:
 				self.Device = None
 		else:
 			self.Device = None
+		if Result_Folder_Path != None:
+			if os.path.isdir(Result_Folder_Path):
+				self.root_folder = os.path.dirname(Result_Folder_Path)
+			else:
+				self.root_folder = None
+		else:
+			self.root_folder = None
 
+		# Get the DB folder path from DB_path
 		if DB_Path != None:
+			self.DB_Folder_Path = os.path.dirname(DB_Path)
 			self.Function_Import_DB(DB_Path)
-
+		else:
+			self.DB_Folder_Path = None
 		self.Update_Action_List()
 		print('Module_Path:', Module_Path)
 		if Module_Path != None:
@@ -90,7 +100,7 @@ class Automation:
 		self.action_list.append(object)	
 
 	def Function_Parse_Data(self, data_type, data_value):
-		print('Locals:', locals())
+		#print('Locals:', locals())
 		if data_type == 'int':
 			parsed_value = int(data_value)
 		elif data_type in ['point', 'area']:
@@ -135,9 +145,9 @@ class Automation:
 						break
 					else:
 						continue
-			print('chain', chain)
+			#print('chain', chain)
 			_block_type = chain['type']
-			print('_block_type', _block_type)
+			#print('_block_type', _block_type)
 			Code_Block = chain['execute_block']
 			_current_list_value = chain['current_list_value']
 			
@@ -167,7 +177,7 @@ class Automation:
 					self.Function_Execute_Block(Status_Queue, Progress_Queue, Pause_Status, Code_Block)
 
 	def Function_Execute_Chain(self, Status_Queue, Chain):
-		print('Current chain:', Chain)
+		#print('Current chain:', Chain)
 		_block_type = Chain['type']
 		_test_name = Chain['name']
 		_arg_list = Chain['arg']
@@ -841,15 +851,10 @@ class Automation:
  
 
 	def Tap_Template(self, image_path, total_attemp = 5, match_rate = 0.8):
-		if not os.path.isfile(image_path):
-			return self.Generate_Result(Status = False)
-
-		#_img_template = read_img(image_path)
-		
+	
 		for i in range(total_attemp):
 			try:
 				result = self._get_item_location(image_path, match_rate)
-				print('Tap_Template', result)
 			except Exception as e:
 				result = False
 				print('Error from Tap_Item:', e)
@@ -1254,10 +1259,38 @@ class Automation:
 		result = self._tap(location['x'], location['y'])
 		return	result
 
+
+	def _verify_template_path(self, template_path):
+		# Obsolute path
+		if os.path.isfile(template_path):
+			#print('Template path is: ', template_path)
+			return template_path
+		else:
+			# Check if image is present in script folder
+			if self.root_folder != None:
+				relative_path = os.path.join(self.root_folder, template_path)
+				if os.path.isfile(relative_path):
+					return relative_path
+			relative_path = os.path.join(self.root_folder, 'temp_img', template_path)
+			if os.path.isfile(relative_path):
+				return relative_path	
+			if self.DB_Folder_Path != None:
+				relative_path = os.path.join(self.DB_Folder_Path, 'temp_img', template_path)
+			else:
+				relative_path = os.path.join(self.root_folder, 'DB', 'temp_img', template_path)	
+			if os.path.isfile(relative_path):
+				return relative_path
+			return False
+
 	def _get_item_location(self, img_template_path, match_rate= 0.80):
-		_img_screenshot = self.Get_Screenshot_In_Working_Resolution()
-		
-		template = cv2.imread(img_template_path)
+		_real_image_path = self._verify_template_path(img_template_path)
+		print('_real_image_path:', _real_image_path)
+		if _real_image_path != False:
+			_img_screenshot = self.Get_Screenshot_In_Working_Resolution()
+		else:
+			return False
+
+		template = cv2.imread(_real_image_path)
 		#template = cv2.cvtColor(template, cv2.COLOR_RGB2BGR)
 		template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
 		#template = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
