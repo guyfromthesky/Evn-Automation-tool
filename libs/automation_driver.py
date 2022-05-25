@@ -726,7 +726,7 @@ class Automation:
 			description= 'Idle for an amount of time.')
 
 		self.append_action_list(type = 'Comment', name = 'Comment', argument = {'comment': 'string'}, 
-			description= 'Comment for the test step.')
+			description= 'Add a comment for the test step. Comment will not be executed or counted.')
 
 		if self.OCR == True:
 			self.append_action_list(type = 'Action', name = 'Scan_Text', argument = {'scan_area': 'area'}, 
@@ -748,10 +748,10 @@ class Automation:
 		for action in self.action_list:
 			if action['type'] == 'Action':
 				true_action = action.copy()
-				true_action['type'] = 'If_True'
+				true_action['type'] = 'Condition Pass'
 				self.append_action_object(true_action)
 				false_action = action.copy()
-				false_action['type'] = 'If_False'
+				false_action['type'] = 'Condition Fail'
 				self.append_action_object(false_action)
 		#print(self.action_list)		
 		#self.append_action_list(type = 'Action', name = 'Test_Tap', argument = {'touch_point': 'point', '2nd_touch_point': 'point'}, description= '')
@@ -1382,9 +1382,9 @@ def Init_Folder(FolderPath):
 			print ("Creation of the directory %s failed" % FolderPath)
 			return False
 
-def Function_Get_TimeStamp():		
-	now = datetime.now()
-	timestamp = str(int(datetime.timestamp(now)))			
+def Function_Get_TimeStamp():
+	# Timestamp with milisecond
+	timestamp = str(datetime.now().strftime("%d_%m_%Y_%H_%M_%S_%f"))		
 	return timestamp
 
 def Sleep(total_miliseconds):

@@ -56,14 +56,20 @@ CWD = os.path.abspath(os.path.dirname(sys.argv[0]))
 ADBPATH = '\"' + CWD + '\\adb\\adb.exe' + '\"'
 #MyTranslatorAgent = 'google'
 TOOL = "Auto Tester"
-VERNUM = ' 1.1.1k'
+rev = 1107
+a,b,c,d = list(str(rev))
+VERNUM = a + '.' + b + '.' + c + chr(int(d)+97)
 VERSION = TOOL  + " " +  VERNUM
 DELAY1 = 20
 DELAY2 = 100
 DELAY3 = 200
 IDLING_CHECK = 0
+CONTIDION_TYPE = ['Condition Pass', 'Condition Fail', 'Condition']
+VARIABLE_UPDATE_TYPE = ['Get Result', 'Update Variable']
+NORMAL_TYPE = ['Action', 'Loop', 'Comment', 'Custom']
+SUPPORTED_TYPE = CONTIDION_TYPE + VARIABLE_UPDATE_TYPE + NORMAL_TYPE
 
-SUPPORTED_TYPE = ['Action', 'Loop', 'Condition', 'If_True', 'If_False', 'Get_Result', 'Update_Variable', 'Comment', 'Custom']
+
 
 #**********************************************************************************
 # UI handle ***********************************************************************
@@ -82,7 +88,6 @@ class Automation_Execuser(Frame):
 		self.Result_Queue = Queue['Result_Queue']
 		self.Status_Queue = Queue['Status_Queue']
 		self.Debug_Queue = Queue['Debug_Queue']
-
 		self.Manager = Manager['Default_Manager']
 
 		self.Options = {}
@@ -116,10 +121,6 @@ class Automation_Execuser(Frame):
 		self.LanguagePack = LanguagePack
 		
 		#**************New row#**************#
-		self.Notice = StringVar()
-		self.Debug = StringVar()
-		self.Progress = StringVar()
-	
 		self.AutoTester = Tester(self.Status_Queue)
 
 		#Generate UI
@@ -398,6 +399,11 @@ class Automation_Execuser(Frame):
 
 		self.Debugger = scrolledtext.ScrolledText(Tab, width=100, height=10, undo=True, wrap=WORD, )
 		self.Debugger.grid(row=Row, column=1, columnspan=9, rowspan=10, padx=5, pady=5, sticky=W+E+N+S)
+
+		self.Debugger.tag_config('warning', background="yellow", foreground="red")
+		self.Debugger.tag_config('info', background=None, foreground="blue")
+		self.Debugger.configure(state='disabled')
+
 		Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['ClearLog'], command= self.ClearLog).grid(row=Row, column=10,padx=5, pady=0, sticky=W)
 		Row+=1
 		Button(Tab, width = self.Button_Width_Half, text=  self.LanguagePack.Button['Stop'], command= self.Stop).grid(row=Row, column=10,padx=5, pady=0, sticky=W)	
@@ -596,11 +602,31 @@ class Automation_Execuser(Frame):
 		'''
 		Function write the text to debugger box and move to the end of the box
 		'''
-		
+		self.Debugger.configure(state='normal')
 		self.Debugger.insert("end", "\n")
-		self.Debugger.insert("end", str(datetime.now()) + ': ' + str(text))
+		self.Debugger.insert("end", str(datetime.now().strftime("%d-%m-%Y %H:%M:%S.%f")) + ': ' + str(text))
+		self.Debugger.yview(END)
+		self.Debugger.configure(state='disabled')
 
-		self.Debugger.yview(END)		
+	def Write_Info(self, text):
+		'''
+		Function write the text to debugger box and move to the end of the box
+		'''
+		self.Debugger.configure(state='normal')
+		self.Debugger.insert("end", "\n")
+		self.Debugger.insert("end", str(datetime.now().strftime("%d-%m-%Y %H:%M:%S.%f")) + ': ' + str(text), 'info')
+		self.Debugger.yview(END)
+		self.Debugger.configure(state='disabled')
+
+	def Write_Warning(self, text):
+		'''
+		Function write the text to debugger box and move to the end of the box
+		'''
+		self.Debugger.configure(state='normal')
+		self.Debugger.insert("end", "\n")
+		self.Debugger.insert("end", str(datetime.now().strftime("%d-%m-%Y %H:%M:%S.%f")) + ': ' + str(text), 'warning')
+		self.Debugger.yview(END)
+		self.Debugger.configure(state='disabled')					
 
 	def entry_next(self, event):
 		event.widget.tk_focusNext().focus()
@@ -1022,11 +1048,13 @@ class Automation_Execuser(Frame):
 				messagebox.showwarning('Warning', ' Loop list only available when you select a execution list.')
 				this_action = self.current_action_name.set('')
 				return
-		this_arg = self.action_dict[this_type][action_name]
+		#this_arg = self.action_dict[this_type][action_name]['arg']
 		self.btn_add_step.configure(state=DISABLED)
 		
 		self.Input_Windows = False
-		print('this_arg', action_name, this_arg)
+		
+		self.Write_Info(self.action_dict[this_type][action_name]['dsc'])
+		#print('this_arg', action_name, this_arg)
 		
 	# This is temporary work, we need to add the value of the arg instead of the arg name.
 	# Will be updated later.
@@ -1055,7 +1083,7 @@ class Automation_Execuser(Frame):
 		if this_action == '':
 			messagebox.showwarning('Warning', 'Please select an action name')	
 			return
-		arg_dict = self.action_dict[this_type][this_action]
+		arg_dict = self.action_dict[this_type][this_action]['arg']
 		self.Current_Arg_Value = []
 		self.Current_Arg_Type = None
 		if arg_dict == None:
@@ -1184,7 +1212,7 @@ class Automation_Execuser(Frame):
 		if this_action == '':
 			messagebox.showinfo('Error...', 'Please select an action name')	
 			return
-		arg_dict = self.action_dict[this_type][this_action]
+		arg_dict = self.action_dict[this_type][this_action]['arg']
 		if arg_dict == None:
 			self.Modify_Input_Value_On_Closing(None,[], this_type, this_action, treeview_node)
 			return
@@ -1539,11 +1567,15 @@ class Automation_Execuser(Frame):
 		action_type = SUPPORTED_TYPE
 		action_type.sort()
 		self.action_dict = {}
+	
 		for type in action_type:
 			self.action_dict[type] = {}
 		for action in self.AutoTester.action_list:
 			if action['type'] in action_type:
-				self.action_dict[action['type']][action['name']] = action['arg']
+				self.action_dict[action['type']][action['name']] = {}
+				self.action_dict[action['type']][action['name']]['arg'] = action['arg']
+				self.action_dict[action['type']][action['name']]['dsc'] = action['description']
+				
 
 	def ismodulefunction(self, module, member):
 			module_member = getattr(module, member)
@@ -1579,8 +1611,10 @@ class Automation_Execuser(Frame):
 			self.action_dict[type] = {}
 		for action in self.AutoTester.action_list:
 			if action['type'] in action_type:
-				self.action_dict[action['type']][action['name']] = action['arg']	
-				
+				self.action_dict[action['type']][action['name']] = {}
+				self.action_dict[action['type']][action['name']]['arg'] = action['arg']	
+				self.action_dict[action['type']][action['name']]['dsc'] = action['description']	
+
 			
 	def Update_Action_Name(self, event=None):
 		menu = self.action_name["menu"]
@@ -1784,8 +1818,6 @@ class Automation_Execuser(Frame):
 
 		self.ScanType = StringVar()
 
-		self.Notice = StringVar()
-
 		self.current_action_type = StringVar()
 		self.current_action_name = StringVar()
 	
@@ -1866,9 +1898,9 @@ class Automation_Execuser(Frame):
 		if filename != "":
 			self.Template_Path = self.CorrectPath(filename)
 			self.Str_Template_Path.set(filename)
-			self.Notice.set(self.LanguagePack.ToolTips['SourceSelected'])
+			self.Write_Debug.set(self.LanguagePack.ToolTips['SourceSelected'])
 		else:
-			self.Notice.set(self.LanguagePack.ToolTips['SourceDocumentEmpty'])
+			self.Write_Debug.set(self.LanguagePack.ToolTips['SourceDocumentEmpty'])
 		return
 
 	def Btn_Browse_Template_File(self):
@@ -1877,9 +1909,9 @@ class Automation_Execuser(Frame):
 		if filename != "":
 			self.Template_Path = self.CorrectPath(filename)
 			self.Str_Template_Path.set(filename)
-			self.Notice.set(self.LanguagePack.ToolTips['SourceSelected'])
+			self.Write_Debug.set(self.LanguagePack.ToolTips['SourceSelected'])
 		else:
-			self.Notice.set(self.LanguagePack.ToolTips['SourceDocumentEmpty'])
+			self.Write_Debug.set(self.LanguagePack.ToolTips['SourceDocumentEmpty'])
 		return
 
 	def Btn_Browse_Test_Case_File(self,event=None):
@@ -1994,7 +2026,7 @@ class Automation_Execuser(Frame):
 			if _action_name in ['End Loop', 'End If']:
 				_arg = []
 			else:		
-				_arg_info = self.action_dict[_action_type][_action_name]
+				_arg_info = self.action_dict[_action_type][_action_name]['arg']
 				_arg = []
 				if _arg_info != None:
 					
@@ -2095,10 +2127,12 @@ class Automation_Execuser(Frame):
 			try:
 				Status = self.Status_Queue.get(0)
 				if Status != None:
+					self.Debugger.configure(state='disabled')
 					self.Debugger.insert("end", "\n\r")
 					ct = datetime.now()
 					self.Debugger.insert("end", str(ct) + ": " + Status)
 					self.Debugger.yview(END)
+					self.Debugger.configure(state='normal')
 			except queue.Empty:
 				break
 		device_status = self.AutoTester.Check_Connectivity()
