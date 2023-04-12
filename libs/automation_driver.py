@@ -9,7 +9,7 @@ from datetime import datetime
 import time
 import pytesseract
 
-#from libs.general_function import *
+from libs.general_function import *
 
 import queue 
 
@@ -122,8 +122,8 @@ class Automation:
 			'current_list_value': []
 			'else_block': else_block
 		}
-			
 		'''
+
 		last_status = 'Running'
 		for chain in Block:
 			while True:
@@ -741,7 +741,7 @@ class Automation:
 			description= 'Add a comment for the test step. Comment will not be executed or counted.')
 
 		if self.OCR == True:
-			self.append_action_list(type = 'Action', name = 'Scan_Text', argument = {'scan_area': 'area'}, 
+			self.append_action_list(type = 'Action', name = 'Scan_Text', argument = {'scan_area': 'area', "export_file_path": 'file'}, 
 				description= 'Scan the text in the selected area.')
 			#self.append_action_list(type = 'Action', name = 'Test_Scan_Text', argument = {'scan_area': 'area', '2nd_scan_area': 'area'}, description= '')
 		
@@ -917,12 +917,17 @@ class Automation:
 			return self.Generate_Result(Status = True, Details = count)
 
 
-	def Scan_Text(self, scan_area):
+	def Scan_Text(self, scan_area, export_file_path= 'OCR_Result'):
+		print('Local', locals())
+		_img = self.Get_Screenshot_In_Working_Resolution()
+		imCrop = _img[int(scan_area['y']):int(scan_area['y']+scan_area['h']), int(scan_area['x']):int(scan_area['x']+scan_area['w'])]
+		text = get_text_from_image(self.tess_lang, imCrop, export_file_path)
 		try:
 			_img = self.Get_Screenshot_In_Working_Resolution()
-			imCrop = _img[int(scan_area[1]):int(scan_area[1]+scan_area[2]), int(scan_area[0]):int(scan_area[0]+scan_area[3])]
-			text = get_text_from_image(self.tess_path, self.tess_lang, self.tess_data, imCrop)
-		except:
+			imCrop = _img[int(scan_area['y']):int(scan_area['y']+scan_area['h']), int(scan_area['x']):int(scan_area['x']+scan_area['w'])]
+			text = get_text_from_image(self.tess_lang, imCrop, export_file_path)
+		except Exception as e:
+			print("error: ", e)
 			return self.Generate_Result(Status = False)
 		return self.Generate_Result(Status = text)
 
@@ -935,7 +940,7 @@ class Automation:
 		_img = self.Get_Screenshot_In_Working_Resolution()
 		imCrop = _img[int(scan_area['y']):int(scan_area['y']+scan_area['h']), int(scan_area['x']):int(scan_area['x']+scan_area['w'])]
 		Img_Name = Correct_Path(name + '_' + Function_Get_TimeStamp() + '.png', self.Result_Path)
-		print('Save image to: ', Img_Name)
+		
 		ResultStatus = True
 		try:
 			cv2.imwrite(Img_Name, imCrop)
@@ -943,7 +948,18 @@ class Automation:
 			ResultStatus = False
 		return self.Generate_Result(Status = ResultStatus)
 			
-
+	def Get_Text_From_Area(self, scan_area, name = 'Crop_IMG_'):
+		#print(scan_area)
+		_img = self.Get_Screenshot_In_Working_Resolution()
+		imCrop = _img[int(scan_area['y']):int(scan_area['y']+scan_area['h']), int(scan_area['x']):int(scan_area['x']+scan_area['w'])]
+		Img_Name = Correct_Path(name + '_' + Function_Get_TimeStamp() + '.png', self.Result_Path)
+		print('Save image to: ', Img_Name)
+		ResultStatus = True
+		try:
+			cv2.imwrite(Img_Name, imCrop)
+		except:
+			ResultStatus = False
+		return self.Generate_Result(Status = ResultStatus)
 
 	def Analyse_Gacha_Acquired(self, Gacha_Amount = 11):
 		Img_Screenshot = self.Get_Screenshot_In_Working_Resolution()
@@ -1411,44 +1427,3 @@ class Automation:
 		if top_right1[1] < bottom_left2[1] or bottom_left1[1] > top_right2[1]:
 			return 0
 		return 1
-
-def Init_Folder(FolderPath):
-	if not os.path.isdir(FolderPath):
-		try:
-			os.mkdir(FolderPath)
-			print('Create new folder:', FolderPath)
-			return True
-		except OSError:
-			print ("Creation of the directory %s failed" % FolderPath)
-			return False
-
-def Function_Get_TimeStamp():
-	# Timestamp with milisecond
-	timestamp = str(datetime.now().strftime("%d_%m_%Y_%H_%M_%S_%f"))		
-	return timestamp
-
-def Sleep(total_miliseconds):
-	time.sleep(total_miliseconds/1000)
-
-def Split_Path(Path):
-	Outputdir = os.path.dirname(Path)
-	baseName = os.path.basename(Path)
-	sourcename, ext = os.path.splitext(baseName)
-	return [Outputdir, sourcename, ext]
-
-def get_text_from_image(tess_path, tess_language, tess_data, input_image):
-	pytesseract.pytesseract.tesseract_cmd = tess_path
-	advanced_tessdata_dir_config = '--psm 7 --tessdata-dir ' + '"' + tess_data + '"'
-	ocr = pytesseract.image_to_string(input_image, lang = tess_language, config=advanced_tessdata_dir_config)
-	ocr = ocr.replace("\n", "").replace("\r", "").replace("\x0c", "")
-	return ocr
-
-def Correct_Path(path, Folder = 'DB'):
-	print("Folder", Folder)
-	print('Path', path )
-	if not os.path.isdir(Folder):
-		try:
-			os.mkdir(Folder)
-		except OSError:
-			return False
-	return Folder + '\\' + path

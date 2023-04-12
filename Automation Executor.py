@@ -55,7 +55,7 @@ CWD = os.path.abspath(os.path.dirname(sys.argv[0]))
 ADBPATH = '\"' + CWD + '\\adb\\adb.exe' + '\"'
 #MyTranslatorAgent = 'google'
 TOOL = "Auto Tester"
-rev = 1108
+rev = 1201
 a,b,c,d = list(str(rev))
 VERNUM = a + '.' + b + '.' + c + chr(int(d)+97)
 VERSION = TOOL  + " " +  VERNUM
@@ -706,6 +706,7 @@ class Automation_Execuser(Frame):
 
 	# Other function
 	def Btn_OCR_Update_Working_Language(self):
+		'''
 		_data_ = str(self.TesseractDataPath.get())
 		_exe_ = str(self.TesseractPath.get())
 		_tessdata_dir_config = '--tessdata-dir ' + "\"" + _data_ + "\""
@@ -720,6 +721,9 @@ class Automation_Execuser(Frame):
 			#self.Write_Debug('Data path: ' + str(_data_))
 			self.Write_Debug(self.LanguagePack.ToolTips['TessLangLoadFail'] + str(e))
 			self.language_list = ['']
+		'''
+		
+		self.language_list = ['en', 'ko']
 
 		self.option_working_language.set_completion_list(self.language_list)
 
@@ -1173,6 +1177,14 @@ class Automation_Execuser(Frame):
 					arg_data['button'] = Button(child_windows, text = 'Select', command = lambda val=arg_data['widget']: self.Btn_Select_Area(val), state=btn_status)
 					arg_data['button'].grid(row=row,column=3, padx=10, pady=10, sticky=E)
 				
+				elif arg_data['variable_type'] == 'file':
+					arg_data['widget'] = Text(child_windows, height = 1, width=30)
+					arg_data['widget'].grid(row=row,column=2, padx=10, pady=10, sticky=S)
+					#arg_data['widget'].bind('<Return>', lambda event, c=child_windows, a=arg_data_list: self.Store_Input_Value_On_Closing(c,a))
+					arg_data['button'] = Button(child_windows, text = 'Browse', command = lambda val=arg_data['widget']: self.Btn_Select_File(val))
+					arg_data['button'].grid(row=row,column=3, padx=10, pady=10, sticky=E)
+				
+				
 				elif arg_data['variable_type'] == 'current_area':
 					arg_data['widget'] = Text(child_windows, height = 1, width=30)
 					arg_data['widget'].grid(row=row,column=2, padx=10, pady=10, sticky=S)
@@ -1326,6 +1338,21 @@ class Automation_Execuser(Frame):
 					except Exception as e:
 						print('Error while adding area value:', e)
 						pass
+				elif arg_data['variable_type'] == 'file':
+					arg_data['widget'] = Text(child_windows, height = 1, width=30)
+					arg_data['widget'].grid(row=row,column=2, padx=10, pady=10, sticky=S)
+					#arg_data['widget'].bind('<Return>', lambda event, c=child_windows,x= this_type, y= this_action,i=treeview_node, a=arg_data_list: self.Modify_Input_Value_On_Closing(c,a,x, y, i))
+					if self.AutoTester.Device != None:
+						btn_status = NORMAL
+					else:
+						btn_status = DISABLED
+					arg_data['button'] = Button(child_windows, text = 'Select', command = lambda val=arg_data['widget']: self.Btn_Select_File(val), state=btn_status)
+					arg_data['button'].grid(row=row,column=3, padx=10, pady=10, sticky=E)
+					try:
+						arg_data['widget'].insert("end", value[value_index])
+					except Exception as e:
+						print('Error while adding area value:', e)
+						pass
 
 				elif arg_data['variable_type'] == 'current_area':
 					arg_data['widget'] = Text(child_windows, height = 1, width=30)
@@ -1370,6 +1397,14 @@ class Automation_Execuser(Frame):
 		cv2.destroyAllWindows()
 		text_widget.delete('1.0', END)	
 		text_widget.insert("end", json.dumps(area))
+
+	def Btn_Select_File(self, text_widget):
+		filename = filedialog.askopenfilename(title =  self.LanguagePack.ToolTips['SelectSource'],filetypes = (("Template files", "*.txt *.csv"), ), multiple = False)	
+		if filename != "":
+			text_widget.delete('1.0', END)	
+			text_widget.insert("end", filename)	
+		cv2.destroyAllWindows()
+		
 
 	def Btn_Crop_Area(self, text_widget):
 		im = self.AutoTester.Get_Screenshot_In_Working_Resolution(self.WorkingResolution)
@@ -1484,6 +1519,9 @@ class Automation_Execuser(Frame):
 					
 			elif arg_data['variable_type'] == 'area':
 				temp_value = arg_data['widget'].get("1.0", END).replace('\n', '')
+			elif arg_data['variable_type'] == 'file':
+				temp_value = arg_data['widget'].get("1.0", END).replace('\n', '')
+
 			elif arg_data['variable_type'] == 'current_area':
 				temp_value = arg_data['widget'].get("1.0", END).replace('\n', '')	
 			elif arg_data['variable_type'] == 'list':

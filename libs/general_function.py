@@ -17,6 +17,10 @@ import imutils
 CWD = os.path.abspath(os.path.dirname(sys.argv[0]))
 import inspect
 
+import easyocr
+import cv2
+import numpy as np
+
 ################################################################################################################
 
 
@@ -652,9 +656,20 @@ def Split_Path(Path):
 
 ################################################################################################################
 
-def get_text_from_image(tess_path, tess_language, tess_data, input_image):
+def get_text_from_image_old(tess_path, tess_language, tess_data, input_image):
 	pytesseract.pytesseract.tesseract_cmd = tess_path
 	advanced_tessdata_dir_config = '--psm 7 --tessdata-dir ' + '"' + tess_data + '"'
 	ocr = pytesseract.image_to_string(input_image, lang = tess_language, config=advanced_tessdata_dir_config)
 	ocr = ocr.replace("\n", "").replace("\r", "").replace("\x0c", "")
 	return ocr
+
+def get_text_from_image(tess_language, input_image, export_path):
+	#print('Local:', locals())
+	reader = easyocr.Reader([tess_language], gpu=False)
+	#image = cv2.imread(input_image)
+	results = reader.readtext(input_image, paragraph="False")[-1]
+	print('Scan result:', results)
+	f = open(export_path, "a")
+	f.write(str(results) + '\n')
+	f.close()
+	return results
