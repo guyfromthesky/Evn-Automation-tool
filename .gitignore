@@ -115,3 +115,7 @@ dmypy.json
 *.png
 *.jpg
 *.png
+
+Compiler/dist/*
+Compiler/build/*
+automation/*
