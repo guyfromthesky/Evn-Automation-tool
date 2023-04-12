@@ -37,7 +37,6 @@ import importlib.util
 
 from openpyxl import load_workbook
 
-
 #from libs.general_function import *
 # Function use for the action builder here
 from libs.automation_driver import Automation as Tester
@@ -56,7 +55,7 @@ CWD = os.path.abspath(os.path.dirname(sys.argv[0]))
 ADBPATH = '\"' + CWD + '\\adb\\adb.exe' + '\"'
 #MyTranslatorAgent = 'google'
 TOOL = "Auto Tester"
-rev = 1107
+rev = 1108
 a,b,c,d = list(str(rev))
 VERNUM = a + '.' + b + '.' + c + chr(int(d)+97)
 VERSION = TOOL  + " " +  VERNUM

@@ -674,6 +674,18 @@ class Automation:
 
 		self.append_action_list(type = 'Action', name = 'Send_Enter_Key', argument = None, 
 			description= 'Press ENTER key on the phone, which will move the focus to the next widget.')
+		
+		self.append_action_list(type = 'Action', name = 'Send_Up_Key', argument = None, 
+			description= 'Press ENTER key on the phone, which will move the focus to the next widget.')
+		
+		self.append_action_list(type = 'Action', name = 'Send_Down_Key', argument = None, 
+			description= 'Press ENTER key on the phone, which will move the focus to the next widget.')
+		
+		self.append_action_list(type = 'Action', name = 'Send_Left_Key', argument = None, 
+			description= 'Press ENTER key on the phone, which will move the focus to the next widget.')
+		
+		self.append_action_list(type = 'Action', name = 'Send_Right_Key', argument = None, 
+			description= 'Press ENTER key on the phone, which will move the focus to the next widget.')
 
 		self.append_action_list(type = 'Action', name = 'Input_Text', argument = {'input_text':'string'}, 
 			description= 'Send a text to the input box.')
@@ -1115,7 +1127,35 @@ class Automation:
 			ResultStatus = False
 
 		return self.Generate_Result(Status = ResultStatus)
-		
+
+	def Send_Left_Key(self):
+		result = self._raw_send_key('21')
+		ResultStatus = True
+		if result != True:
+			ResultStatus = False
+		return self.Generate_Result(Status = ResultStatus)		
+
+	def Send_Right_Key(self):
+		result = self._raw_send_key('22')
+		ResultStatus = True
+		if result != True:
+			ResultStatus = False
+		return self.Generate_Result(Status = ResultStatus)	
+
+	def Send_Up_Key(self):
+		result = self._raw_send_key('19')
+		ResultStatus = True
+		if result != True:
+			ResultStatus = False
+		return self.Generate_Result(Status = ResultStatus)	
+	
+	def Send_Up_Key(self):
+		result = self._raw_send_key('20')
+		ResultStatus = True
+		if result != True:
+			ResultStatus = False
+		return self.Generate_Result(Status = ResultStatus)	
+	
 
 	def Input_Text(self, input_text):
 		self._raw_send_text(input_text)
