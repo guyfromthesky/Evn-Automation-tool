@@ -119,3 +119,4 @@ dmypy.json
 Compiler/dist/*
 Compiler/build/*
 automation/*
+*.csv

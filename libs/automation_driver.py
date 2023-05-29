@@ -7,7 +7,7 @@ import json
 
 from datetime import datetime
 import time
-import pytesseract
+
 
 from libs.general_function import *
 
@@ -34,10 +34,36 @@ import importlib.util
 class Automation:
 	# Serial: Device's serial
 	# DB: Database's Path.
-	def __init__(self, Status_Queue, Resolution = '1080', Language = 'en', Tess_Path = None, Tess_Data = None, Serial = None, DB_Path = None, Result_Folder_Path = None, Module_Path = None):
+	def __init__(	self, Status_Queue, Resolution = '1080', 
+	      			Language = 'en', Serial = None, DB_Path = None, 
+				    Device_Type = 'mobile',
+					Result_Folder_Path = None, Module_Path = None):
+		# Shared memory that transfer the progress of the automation to the UI
 		self.Debugger = Status_Queue
-		self.Client = AdbClient(host="127.0.0.1", port=5037)
-		self.Gacha_Pool = []
+		# To support both mobole (adb) and PC (pywinauto)
+		self.Device_Type = Device_Type
+
+
+		self.Resolution = Resolution
+		self.Ratio = 1
+
+		#If the device type = mobile, create ADB server
+		if self.Device_Type == "mobile":
+			self.Client = AdbClient(host="127.0.0.1", port=5037)
+			if Serial != None:	
+				self.Serial = Serial
+				if self.Client != None:	
+					self.Device = self.Client.device(Serial)
+					if self.Device != None:
+						self.Ratio = self.Get_Ratio()
+				else:
+					self.Device = None
+			else:
+				self.Device = None
+		elif self.Device_Type == 'pc':
+
+			pass
+
 		self.Execution_List = []
 		self.Current_Value = None
 		
@@ -47,28 +73,18 @@ class Automation:
 		self.Result_Array = []
 		
 		self.Result_Path = Result_Folder_Path
+		# Please be aware of adding path with string
+		#self.Test_Log = self.Result_Path + "\result_log.csv"
+		self.Test_Log = os.path.join(self.Result_Path, "\result_log.csv")
+		print('Log path:', self.Test_Log)
+		self.OCR = True
 
-		self.tess_path = Tess_Path
-		self.tess_data = Tess_Data
-		self.tess_lang = Language
-		if Tess_Path != None and Tess_Data != None and Language != None:
-			self.OCR = True
-		else:
-			self.OCR = False
+		self.Reader = easyocr.Reader([Language], gpu=False)
+
 		self.LoopList = False
-		self.Resolution = Resolution
-		self.Ratio = 1
+		
 
-		if Serial != None:	
-			self.Serial = Serial
-			if self.Client != None:	
-				self.Device = self.Client.device(Serial)
-				if self.Device != None:
-					self.Ratio = self.Get_Ratio()
-			else:
-				self.Device = None
-		else:
-			self.Device = None
+		
 		if Result_Folder_Path != None:
 			if os.path.isdir(Result_Folder_Path):
 				self.root_folder = os.path.dirname(Result_Folder_Path)
@@ -192,10 +208,8 @@ class Automation:
 				Status_Queue.put('Execute action: ' + _test_name)
 				Status_Queue.put('Execute result: ' + 'Activated condition are not matched, skip this block')
 				return
-
-	
-		kwarg = {}
 		
+		kwarg = {}
 		
 		if len(_arg_list) > 0:	
 			for _temp_arg in _arg_list:
@@ -210,7 +224,6 @@ class Automation:
 		self.Last_Result = function_object(**kwarg)
 		Status_Queue.put('Execute action: ' + _test_name + ': ' + str(kwarg))
 		Status_Queue.put('Execute result: ' + 'Result: ' + str(self.Last_Result))
-
 
 	def Function_Load_Module(self, Module_Path):
 		# Need to run again in main Automation lib
@@ -686,6 +699,9 @@ class Automation:
 		
 		self.append_action_list(type = 'Action', name = 'Send_Right_Key', argument = None, 
 			description= 'Press ENTER key on the phone, which will move the focus to the next widget.')
+		
+		self.append_action_list(type = 'Action', name = 'Send_Custom_Key', argument = {'key': 'int'},
+			description= 'Press ENTER key on the phone, which will move the focus to the next widget.')
 
 		self.append_action_list(type = 'Action', name = 'Input_Text', argument = {'input_text':'string'}, 
 			description= 'Send a text to the input box.')
@@ -741,7 +757,7 @@ class Automation:
 			description= 'Add a comment for the test step. Comment will not be executed or counted.')
 
 		if self.OCR == True:
-			self.append_action_list(type = 'Action', name = 'Scan_Text', argument = {'scan_area': 'area', "export_file_path": 'file'}, 
+			self.append_action_list(type = 'Action', name = 'Scan_Text', argument = {'scan_area': 'area', "export_file_path": 'string'}, 
 				description= 'Scan the text in the selected area.')
 			#self.append_action_list(type = 'Action', name = 'Test_Scan_Text', argument = {'scan_area': 'area', '2nd_scan_area': 'area'}, description= '')
 		
@@ -918,10 +934,11 @@ class Automation:
 
 
 	def Scan_Text(self, scan_area, export_file_path= 'OCR_Result'):
-		print('Local', locals())
-		_img = self.Get_Screenshot_In_Working_Resolution()
-		imCrop = _img[int(scan_area['y']):int(scan_area['y']+scan_area['h']), int(scan_area['x']):int(scan_area['x']+scan_area['w'])]
-		text = get_text_from_image(self.tess_lang, imCrop, export_file_path)
+		#print('Local', locals())
+		export_file_path = Correct_Path(export_file_path + '.csv', self.Result_Path)
+		#_img = self.Get_Screenshot_In_Working_Resolution()
+		#imCrop = _img[int(scan_area['y']):int(scan_area['y']+scan_area['h']), int(scan_area['x']):int(scan_area['x']+scan_area['w'])]
+		#text = get_text_from_image(self.tess_lang, imCrop, export_file_path)
 		try:
 			_img = self.Get_Screenshot_In_Working_Resolution()
 			imCrop = _img[int(scan_area['y']):int(scan_area['y']+scan_area['h']), int(scan_area['x']):int(scan_area['x']+scan_area['w'])]
@@ -1165,13 +1182,19 @@ class Automation:
 			ResultStatus = False
 		return self.Generate_Result(Status = ResultStatus)	
 	
-	def Send_Up_Key(self):
+	def Send_Down_Key(self):
 		result = self._raw_send_key('20')
 		ResultStatus = True
 		if result != True:
 			ResultStatus = False
 		return self.Generate_Result(Status = ResultStatus)	
 	
+	def Send_Custom_Key(self, key):
+		result = self._raw_send_key(key)
+		ResultStatus = True
+		if result != True:
+			ResultStatus = False
+		return self.Generate_Result(Status = ResultStatus)	
 
 	def Input_Text(self, input_text):
 		self._raw_send_text(input_text)

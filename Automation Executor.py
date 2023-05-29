@@ -55,7 +55,7 @@ CWD = os.path.abspath(os.path.dirname(sys.argv[0]))
 ADBPATH = '\"' + CWD + '\\adb\\adb.exe' + '\"'
 #MyTranslatorAgent = 'google'
 TOOL = "Auto Tester"
-rev = 1201
+rev = 1202
 a,b,c,d = list(str(rev))
 VERNUM = a + '.' + b + '.' + c + chr(int(d)+97)
 VERSION = TOOL  + " " +  VERNUM
@@ -460,16 +460,16 @@ class Automation_Execuser(Frame):
 		Create Setting Tab
 		'''
 		Row = 1
-		Label(Tab, text= self.LanguagePack.Label['TesseractPath']).grid(row=Row, column=1, padx=5, pady=5, sticky=W)
-		self.Text_TesseractPath = Entry(Tab,width = 100, state="readonly", textvariable=self.TesseractPath)
-		self.Text_TesseractPath.grid(row=Row, column=3, columnspan=5, padx=5, pady=5, sticky=E+W)
-		Button(Tab, width = self.Button_Width_Full, text=  self.LanguagePack.Button['Browse'], command= self.Btn_Select_Tesseract_Path).grid(row=Row, column=9, columnspan=2, padx=5, pady=5, sticky=E)
+		#Label(Tab, text= self.LanguagePack.Label['TesseractPath']).grid(row=Row, column=1, padx=5, pady=5, sticky=W)
+		#self.Text_TesseractPath = Entry(Tab,width = 100, state="readonly", textvariable=self.TesseractPath)
+		#self.Text_TesseractPath.grid(row=Row, column=3, columnspan=5, padx=5, pady=5, sticky=E+W)
+		#Button(Tab, width = self.Button_Width_Full, text=  self.LanguagePack.Button['Browse'], command= self.Btn_Select_Tesseract_Path).grid(row=Row, column=9, columnspan=2, padx=5, pady=5, sticky=E)
 		
-		Row += 1
-		Label(Tab, text= self.LanguagePack.Label['TesseractDataPath']).grid(row=Row, column=1, padx=5, pady=5, sticky=W)
-		self.Text_TesseractDataPath = Entry(Tab,width = 100, state="readonly", textvariable=self.TesseractDataPath)
-		self.Text_TesseractDataPath.grid(row=Row, column=3, columnspan=5, padx=5, pady=5, sticky=E+W)
-		Button(Tab, width = self.Button_Width_Full, text=  self.LanguagePack.Button['Browse'], command= self.Btn_Select_Tesseract_Data_Path).grid(row=Row, column=9, columnspan=2, padx=5, pady=5, sticky=E)
+		#Row += 1
+		#Label(Tab, text= self.LanguagePack.Label['TesseractDataPath']).grid(row=Row, column=1, padx=5, pady=5, sticky=W)
+		#self.Text_TesseractDataPath = Entry(Tab,width = 100, state="readonly", textvariable=self.TesseractDataPath)
+		#self.Text_TesseractDataPath.grid(row=Row, column=3, columnspan=5, padx=5, pady=5, sticky=E+W)
+		#Button(Tab, width = self.Button_Width_Full, text=  self.LanguagePack.Button['Browse'], command= self.Btn_Select_Tesseract_Data_Path).grid(row=Row, column=9, columnspan=2, padx=5, pady=5, sticky=E)
 		
 		Row += 1
 		Label(Tab, text= self.LanguagePack.Label['DBPath']).grid(row=Row, column=1, padx=5, pady=5, sticky=W)
@@ -1399,7 +1399,7 @@ class Automation_Execuser(Frame):
 		text_widget.insert("end", json.dumps(area))
 
 	def Btn_Select_File(self, text_widget):
-		filename = filedialog.askopenfilename(title =  self.LanguagePack.ToolTips['SelectSource'],filetypes = (("Template files", "*.txt *.csv"), ), multiple = False)	
+		filename = filedialog.askopenfilename(title =  self.LanguagePack.ToolTips['SelectSource'],filetypes = (("Template files", "*.csv"), ), multiple = False)	
 		if filename != "":
 			text_widget.delete('1.0', END)	
 			text_widget.insert("end", filename)	
@@ -2232,7 +2232,7 @@ def Function_Execute_Script(
 		return
 
 	AutoTester.Function_Execute_Block(Status_Queue, Progress_Queue, Result_Queue, result)
-		
+	
 	End = time.time()
 	Status_Queue.put('Total testing time: ' + str(int(End-Start)) + " seconds.")	
 

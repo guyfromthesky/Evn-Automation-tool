@@ -60,8 +60,8 @@ from libs.tkinter_extension import AutocompleteCombobox
 
 import cv2
 import numpy as np
-import pytesseract
-
+#import pytesseract
+import easyocr
 #import Levenshtein as lev
 from rapidfuzz.distance import Levenshtein as lev_distance
 from rapidfuzz.distance import Indel as lev_ratio
@@ -293,9 +293,9 @@ class OCR_Project(Frame):
 		self.Btn_Open_Result.grid(row=Row, column=9, columnspan=2,padx=5, pady=5, sticky=W)
 		self.Btn_Open_Result.configure(state=DISABLED)
 
-		Row+=1
-		Btn_Update_Language = Button(Tab, width = self.Button_Width_Half, text= self.LanguagePack.Button['UpdateLanguage'], command= self.Btn_OCR_Update_Working_Language)
-		Btn_Update_Language.grid(row=Row, column=9, columnspan=2, padx=5, pady=5, sticky=W)
+		#Row+=1
+		#Btn_Update_Language = Button(Tab, width = self.Button_Width_Half, text= self.LanguagePack.Button['UpdateLanguage'], command= self.Btn_OCR_Update_Working_Language)
+		#Btn_Update_Language.grid(row=Row, column=9, columnspan=2, padx=5, pady=5, sticky=W)
 		#Btn_Execute.configure(state=DISABLED)
 
 		Row+=1
@@ -335,18 +335,6 @@ class OCR_Project(Frame):
 		Create Setting Tab
 		'''
 		Row = 1
-		Label(Tab, text= self.LanguagePack.Label['TesseractPath']).grid(row=Row, column=1, padx=5, pady=5, sticky=W)
-		self.Text_TesseractPath = Entry(Tab,width = 100, state="readonly", textvariable=self.TesseractPath)
-		self.Text_TesseractPath.grid(row=Row, column=3, columnspan=5, padx=5, pady=5, sticky=E+W)
-		Button(Tab, width = self.Button_Width_Full, text=  self.LanguagePack.Button['Browse'], command= self.Btn_Select_Tesseract_Path).grid(row=Row, column=9, columnspan=2, padx=5, pady=5, sticky=E)
-		
-		Row += 1
-		Label(Tab, text= self.LanguagePack.Label['TesseractDataPath']).grid(row=Row, column=1, padx=5, pady=5, sticky=W)
-		self.Text_TesseractDataPath = Entry(Tab,width = 100, state="readonly", textvariable=self.TesseractDataPath)
-		self.Text_TesseractDataPath.grid(row=Row, column=3, columnspan=5, padx=5, pady=5, sticky=E+W)
-		Button(Tab, width = self.Button_Width_Full, text=  self.LanguagePack.Button['Browse'], command= self.Btn_Select_Tesseract_Data_Path).grid(row=Row, column=9, columnspan=2, padx=5, pady=5, sticky=E)
-		
-		Row += 1
 		Label(Tab, text= self.LanguagePack.Label['DBPath']).grid(row=Row, column=1, padx=5, pady=5, sticky=W)
 		self.Text_DB_Path = Entry(Tab,width = 100, state="readonly", textvariable=self.DBPath)
 		self.Text_DB_Path.grid(row=Row, column=3, columnspan=5, padx=5, pady=5, sticky=E+W)
@@ -513,16 +501,9 @@ class OCR_Project(Frame):
 
 		self.Notice = StringVar()
 
-		self.AppConfig = ConfigLoader()
+		self.AppConfig = ConfigLoader("OCR_TOOL")
 		self.Configuration = self.AppConfig.Config
 		self.AppLanguage  = self.Configuration['OCR_TOOL']['app_lang']
-
-		_tesseract_path = self.Configuration['OCR_TOOL']['tess_path']
-		pytesseract.pytesseract.tesseract_cmd = str(_tesseract_path)
-		self.TesseractPath.set(_tesseract_path)
-
-		_tesseract_data_path = self.Configuration['OCR_TOOL']['tess_data']
-		self.TesseractDataPath.set(_tesseract_data_path)
 
 		_db_path = self.Configuration['OCR_TOOL']['db_path']
 		self.DBPath.set(_db_path)
@@ -535,7 +516,7 @@ class OCR_Project(Frame):
 
 		
 	def init_UI_Data(self):
-		self.Btn_OCR_Update_Working_Language()
+		#self.Btn_OCR_Update_Working_Language()
 		_working_language = self.Configuration['OCR_TOOL']['scan_lang']
 		self.option_working_language.set(_working_language)
 
@@ -966,26 +947,6 @@ class OCR_Project(Frame):
 				pass
 			self.BadWord_Check_Process.terminate()
 
-	def Btn_OCR_Update_Working_Language(self):
-		_data_ = str(self.TesseractDataPath.get())
-		_exe_ = str(self.TesseractPath.get())
-		_tessdata_dir_config = '--tessdata-dir ' + "\"" + _data_ + "\""
-		pytesseract.pytesseract.tesseract_cmd = _exe_
-		#self.language_list = pytesseract.get_languages(config=_tessdata_dir_config)
-		try:
-			self.language_list = pytesseract.get_languages(config=_tessdata_dir_config)
-			self.Write_Debug('Supported language list has been updated!')
-
-		except Exception as e:
-			self.Write_Debug('Tess path: ' + str(_exe_))
-			self.Write_Debug('Data path: ' + str(_data_))
-			self.Write_Debug('Error while updating supported language: ' + str(e))
-			self.language_list = ['']
-
-		self.option_working_language.set_completion_list(self.language_list)
-
-	
-
 
 	def Open_OCR_Result_Folder(self):
 
@@ -1086,28 +1047,6 @@ class OCR_Project(Frame):
 # OCR Setting
 ###########################################################################################
 
-	def Btn_Select_Tesseract_Path(self):
-		filename = filedialog.askopenfilename(title =  self.LanguagePack.ToolTips['SelectDB'],filetypes = (("Executable files","*.exe" ), ), )	
-		if os.path.isfile(filename):
-			_tess_path = self.CorrectPath(filename)
-			self.AppConfig.Save_Config(self.AppConfig.Ocr_Tool_Config_Path, 'OCR_TOOL', 'tess_path', _tess_path, True)
-			pytesseract.pytesseract.tesseract_cmd = _tess_path
-			self.TesseractPath.set(_tess_path)
-		else:
-			self.Write_Debug(self.LanguagePack.ToolTips['TessNotSelect'])
-
-	def Btn_Select_Tesseract_Data_Path(self):
-		folder_name = filedialog.askdirectory(title =  self.LanguagePack.ToolTips['SelectSource'],)	
-		if os.path.isdir(folder_name):
-			folder_name = self.CorrectPath(folder_name)
-			self.TesseractDataPath.set(folder_name)
-
-			self.AppConfig.Save_Config(self.AppConfig.Ocr_Tool_Config_Path, 'OCR_TOOL', 'tess_data', folder_name, True)
-
-			self.Write_Debug(self.LanguagePack.ToolTips['DataSelected'] + ": " + folder_name)
-		else:
-			self.Write_Debug(self.LanguagePack.ToolTips['SourceDocumentEmpty'])
-
 	def Btn_Select_DB_Path(self):
 		filename = filedialog.askopenfilename(title =  self.LanguagePack.ToolTips['SelectDB'],filetypes = (("DB files","*.csv" ), ), )	
 		if os.path.isfile(filename):
@@ -1167,12 +1106,10 @@ class OCR_Project(Frame):
 ###########################################################################################
 
 def Function_Batch_OCR_Execute(
-	Result_Queue, Status_Queue, Process_Queue, tess_path, tess_language, tess_data, image_files, result_file, ratio, scan_areas, scan_type = 'Text only', db_path = [], **kwargs):
+	Result_Queue, Status_Queue, Process_Queue, ocr_language, image_files, result_file, ratio, scan_areas, scan_type = 'Text only', db_path = [], **kwargs):
 	
-	advanced_tessdata_dir_config = '--psm 7 --tessdata-dir ' + '"' + tess_data + '"'
-
-	if tess_language == '':
-		tess_language = 'kor'
+	if ocr_language == '':
+		ocr_language = 'kor'
 
 	_output_dir = os.path.dirname(result_file)
 
@@ -1218,11 +1155,11 @@ def Function_Batch_OCR_Execute(
 		word_db_list = []
 		
 		for element in DB:
-			word = element[tess_language]
+			word = element[ocr_language]
 			word_db_list.append(word.replace(' ','').lower())
 		
 		for image in _draft_result:
-			key = str(Function_Get_Text_from_Image(tess_path, tess_language, advanced_tessdata_dir_config, _unique_text_image_dir + '\\' + image))
+			key = str(Function_Get_Text_from_Image(ocr_language, _unique_text_image_dir + '\\' + image))
 			_match_type = 'none'
 			if len(word_db_list)> 0:
 				_temp_text = key.replace(' ','').lower()
@@ -1331,7 +1268,7 @@ def Function_Batch_OCR_Execute(
 				if os.path.isfile(_template):
 					_image_compare_result = Function_Compare_2_Image(_temp_template, _template)
 					if _image_compare_result == True:
-						_name = row[tess_language]
+						_name = row[ocr_language]
 						temp_result['name'] = _name
 						break
 					else:
@@ -1367,7 +1304,7 @@ def Function_Batch_OCR_Execute(
 		DB = Function_Import_DB(db_path)
 		word_db_list = []
 		for element in DB:
-			word = element[tess_language]
+			word = element[ocr_language]
 			word_db_list.append(word.replace(' ','').lower())
 		
 		current_ratio = 0
@@ -1409,7 +1346,7 @@ def Function_Batch_OCR_Execute(
 				if os.path.isfile(_template):
 					_image_compare_result = Function_Compare_2_Image(_temp_template, _template)
 					if _image_compare_result == True:
-						_name = row[tess_language]
+						_name = row[ocr_language]
 						temp_result['image'] = _temp_template
 						temp_result['count'] = unique_image['count']
 						temp_result['text_raw'] = unique_image['text_raw'][0]
@@ -1438,7 +1375,7 @@ def Function_Batch_OCR_Execute(
 		for unique_image in _draft_result[:]:
 
 			_temp_template = _output_dir + '/' +  unique_image['component']
-			key = str(Function_Get_Text_from_Image(tess_path, tess_language, advanced_tessdata_dir_config, _temp_template))
+			key = str(Function_Get_Text_from_Image(ocr_language, _temp_template))
 			
 			if len(word_db_list)> 0:
 				_temp_text = key.replace(' ','').lower()
@@ -1544,7 +1481,7 @@ def Function_Batch_OCR_Execute(
 		
 		for component_detail in _draft_result:
 	
-			key = str(Function_Get_Text_from_Image(tess_path, tess_language, advanced_tessdata_dir_config, component_detail['text_raw'][0]))
+			key = str(Function_Get_Text_from_Image(ocr_language, component_detail['text_raw'][0]))
 			key = key.replace(' ','')
 			component_detail['text'] = key
 			
@@ -1556,7 +1493,7 @@ def Function_Batch_OCR_Execute(
 		current_ratio += process_ratio
 		
 		Status_Queue.put('Export test result')
-		Function_Export_Auto_DB(Status_Queue, _draft_result, tess_language, db_path)
+		Function_Export_Auto_DB(Status_Queue, _draft_result, ocr_language, db_path)
 		Status_Queue.put('Append ' + str(len(_draft_result)) + ' row(s) to DB.')
 		percent = ShowProgress(1, 1)
 		Process_Queue.put(percent)
@@ -1567,7 +1504,8 @@ def Function_Batch_OCR_Execute(
 
 def Get_Text_From_Single_Image(tess_path, tess_language, advanced_tessdata_dir_config, input_image, ratio, scan_areas, result_file,):
 
-	pytesseract.pytesseract.tesseract_cmd = tess_path
+	reader = easyocr.Reader([tess_language], gpu=False)
+
 	_img = Load_Image_by_Ratio(input_image, ratio)
 	_result = []
 	_output_dir = os.path.dirname(result_file)
@@ -1597,10 +1535,9 @@ def Get_Text_From_Single_Image(tess_path, tess_language, advanced_tessdata_dir_c
 		except PermissionError:
 			continue
 
-def Function_Get_Text_from_Image(tess_path, tess_language, advanced_tessdata_dir_config, input_image):
-	pytesseract.pytesseract.tesseract_cmd = tess_path
+def Function_Get_Text_from_Image(ocr_language, input_image):
 	imCrop = cv2.imread(input_image)
-	ocr = Get_Text(imCrop, tess_language, advanced_tessdata_dir_config)
+	ocr = Get_Text(imCrop, ocr_language)
 	return ocr
 
 def Function_Compare_2_Image(source_image_path, target_image_path):
@@ -2182,8 +2119,9 @@ def Function_Analyze_Gacha_Data(_raw_data, col_name):
 
 
 
-def Get_Text(img, tess_language, tessdata_dir_config):
-	ocr = pytesseract.image_to_string(img, lang = tess_language, config=tessdata_dir_config)
+def Get_Text(img, ocr_language):
+	reader = easyocr.Reader([ocr_language], gpu=False)
+	ocr = reader.readtext(img, paragraph="False")
 	ocr = ocr.replace("\n", "")
 	ocr = ocr.replace("\r", "")  
 	ocr = ocr.replace("\x0c", "") 
@@ -2194,11 +2132,9 @@ def Get_Text(img, tess_language, tessdata_dir_config):
 ###########################################################################################
 
 def Function_Preview_Scan(
-	Result_Queue, Process_Queue, tess_path, tess_language, test_data, image_files, ratio, scan_areas, **kwargs):
-	pytesseract.pytesseract.tesseract_cmd = tess_path
-	tessdata_dir_config = '--tessdata-dir ' + '"' + test_data + '"'
-	if tess_language == '':
-		tess_language = 'kor'
+	Result_Queue, Process_Queue, tess_path, ocr_language, test_data, image_files, ratio, scan_areas, **kwargs):
+	if ocr_language == '':
+		ocr_language = 'kor'
 	
 	_result = []
 	_counter = 0
@@ -2212,7 +2148,7 @@ def Function_Preview_Scan(
 		imCrop = _img[int(area[1]):int(area[1]+area[3]), int(area[0]):int(area[0]+area[2])]
 		imCrop = Function_Pre_Processing_Image(imCrop)
 		
-		ocr = Get_Text(imCrop, tess_language, tessdata_dir_config)
+		ocr = Get_Text(imCrop, ocr_language)
 	
 		_result.append(ocr)
 		_counter+=1	
